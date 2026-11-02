@@ -1,0 +1,58 @@
+# Database Configuration
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:documind}
+    username: postgres
+    password: postgres
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  # File upload limits
+  servlet:
+    multipart:
+      max-file-size: 25MB
+      max-request-size: 50MB
+
+  # AI Model Configuration (Groq / OpenAI compatible)
+  ai:
+    openai:
+      base-url: "https://api.groq.com/openai/v1"
+      api-key: ${GROQ_API_KEY:}
+      chat:
+        model: "qwen/qwen3.8-27b"
+        temperature: 0.2
+      embedding:
+        enabled: false
+
+    # Vector Store Configuration
+    vectorstore:
+      pgvector:
+        index-type: HNSW
+        distance-type: COSINE_DISTANCE
+        dimensions: 768
+        table-name: documind_vector_store
+        schema-name: public
+        initialize-schema: true
+
+# App Configuration
+app:
+  rag:
+    chunk-size: 600
+    chunk-overlap: 100
+    top-k: 5
+    similarity-threshold: 0.0
+
+  cors:
+    allowed-origins: "*"
+    allowed-methods: "*"
+    allowed-headers: "*"
+
+# Gemini Configuration
+gemini:
+  api-key: ${GEMINI_API_KEY:}
