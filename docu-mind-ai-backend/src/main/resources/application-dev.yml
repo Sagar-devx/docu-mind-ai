@@ -43,8 +43,11 @@ spring:
 # App Configuration
 app:
   rag:
-    chunk-size: 600
+    chunk-size: 700
     chunk-overlap: 100
+    min-chunk-size-chars: 350
+    max-num-chunks: 10000
+    min-chunk-length-to-embed: 5
     top-k: 5
     similarity-threshold: 0.0
 

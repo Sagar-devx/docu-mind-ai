@@ -1,7 +1,7 @@
 package com.documind.entity;
 
 public enum DocumentStatus {
-    UPLOADED,
+    UPLOADING,
     PROCESSING,
     INDEXED,
     FAILED
