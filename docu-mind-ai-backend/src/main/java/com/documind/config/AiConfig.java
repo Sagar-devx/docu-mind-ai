@@ -33,6 +33,7 @@ public class AiConfig {
         return new EmbeddingModel() {
             @Override
             public EmbeddingResponse call(EmbeddingRequest request) {
+
                 List<Embedding> embeddings = new ArrayList<>();
                 int idx = 0;
                 for (String text : request.getInstructions()) {
