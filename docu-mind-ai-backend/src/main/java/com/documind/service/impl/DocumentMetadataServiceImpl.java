@@ -4,6 +4,7 @@ import com.documind.dto.DocumentMetadataDto;
 import com.documind.dto.DocumentResponseDto;
 import com.documind.entity.DocumentMetaData;
 import com.documind.entity.DocumentStatus;
+import com.documind.exception.DocumentProcessingException;
 import com.documind.exception.ResourceNotFoundException;
 import com.documind.repository.DocumentMetadataRepository;
 import com.documind.service.DocumentMetadataService;
@@ -49,9 +50,19 @@ public class DocumentMetadataServiceImpl implements DocumentMetadataService {
 
         documentMetaData = documentMetadataRepository.save(documentMetaData);
 
-        List<Document> parsedDocs = parserService.parse(file);
+        List<Document> parsedDocs = null;
+        int chunksCreated = 0;
+        try {
+            parsedDocs = parserService.parse(file);
 
-        int chunksCreated = ingestionService.ingest(parsedDocs, documentMetaData);
+            chunksCreated = ingestionService.ingest(parsedDocs, documentMetaData);
+
+        }catch (DocumentProcessingException e)
+        {
+            log.info("Document metadata deleting due to fail processing");
+            documentMetadataRepository.delete(documentMetaData);
+            throw e;
+        }
 
         return DocumentResponseDto.builder()
                 .id(documentMetaData.getId())
@@ -76,7 +87,7 @@ public class DocumentMetadataServiceImpl implements DocumentMetadataService {
         return responseDtos;
     }
 
-    // Fetches all documents sorted by newest first for the library dashboard
+    // Fetches all documents sorted by newest first
     @Override
     public List<DocumentMetadataDto> getAllDocuments() {
 
