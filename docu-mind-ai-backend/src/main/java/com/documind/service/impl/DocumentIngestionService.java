@@ -26,6 +26,7 @@ public class DocumentIngestionService {
     private final DocumentMetadataRepository documentMetadataRepository;
     private final AppProperties appProperties;
 
+    // Takes parsed document text, chops it into vector-friendly chunks, enriches metadata, and saves embeddings
     public int ingest(List<Document> parsedDocs, DocumentMetaData documentMetaData) {
 
         log.info("Ingesting document: {} with {} chunks", documentMetaData.getFileName(), parsedDocs.size());
@@ -34,6 +35,7 @@ public class DocumentIngestionService {
             documentMetaData.setStatus(DocumentStatus.PROCESSING);
             documentMetaData.setTotalPages(parsedDocs.size());
 
+            // 1. Break text into smaller token chunks with slight overlap so context isn't chopped mid-sentence
             TokenTextSplitter tokenTextSplitter = TokenTextSplitter.builder()
                     .withChunkSize(appProperties.getRag().getChunkSize())
                     .withMinChunkSizeChars(appProperties.getRag().getMinChunkSizeChars())
@@ -51,6 +53,7 @@ public class DocumentIngestionService {
                 throw new DocumentProcessingException("No chunks were created from the document. Please check the document content.");
             }
 
+            // 2. Tag each chunk with documentId, chunk index, and page number so search citations know the exact origin
             List<Document> enrichedChunks = new ArrayList<>();
 
             for (int i = 0; i < chunks.size(); i++) {
@@ -75,6 +78,7 @@ public class DocumentIngestionService {
             }
             log.info("Ingesting {} chunks for document: {}", enrichedChunks.size(), documentMetaData.getFileName());
 
+            // 3. Generate embeddings and store vectors into PgVector
             vectorStore.add(enrichedChunks);
             documentMetaData.setStatus(DocumentStatus.INDEXED);
             documentMetaData.setTotalChunks(enrichedChunks.size());

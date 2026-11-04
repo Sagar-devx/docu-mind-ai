@@ -16,6 +16,7 @@ import java.util.List;
 @Slf4j
 public class DocumentParserService {
 
+    // Routes the file to the right parser: PDFs get page-aware extraction, while docx/txt go through Apache Tika
     public List<Document> parse(MultipartFile file) {
 
         String fileName = file.getOriginalFilename() != null ? file.getOriginalFilename() : "document";
@@ -38,11 +39,13 @@ public class DocumentParserService {
         }
     }
 
+    // Tika is our Swiss Army knife for formats like .docx, .txt, .html, etc.
     private List<Document> parseGenericFile(Resource resource) {
         TikaDocumentReader documentReader = new TikaDocumentReader(resource);
         return documentReader.read();
     }
 
+    // PagePdfDocumentReader keeps page boundaries intact so we can cite exact page numbers later
     private List<Document> parsePdf(Resource resource) {
         PdfDocumentReaderConfig config = PdfDocumentReaderConfig.builder()
                 .withPageTopMargin(0)

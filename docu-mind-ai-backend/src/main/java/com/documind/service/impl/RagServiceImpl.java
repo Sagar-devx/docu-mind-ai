@@ -29,6 +29,7 @@ public class RagServiceImpl implements RagService {
     private final AppProperties appProperties;
     private final ChatClient chatClient;
 
+    // Synchronous Q&A: finds relevant chunks, builds prompt with context, and returns answer with citations
     @Override
     public ChatResponseDto askQuestion(ChatRequestDto request) {
         long startTime = System.currentTimeMillis();
@@ -67,6 +68,7 @@ public class RagServiceImpl implements RagService {
                 .build();
     }
 
+    // Streaming Q&A: streams response tokens word-by-word via Flux (SSE) for a real-time typing feel
     @Override
     public Flux<String> streamQuestionAnswer(ChatRequestDto request) {
         String convId = request.getConversationId() != null ? request.getConversationId() : UUID.randomUUID().toString();
@@ -90,6 +92,7 @@ public class RagServiceImpl implements RagService {
                 .doOnError(e -> log.error("Error during streaming for conversationId: '{}'", convId, e));
     }
 
+    // Grounds the LLM by combining retrieved document chunks with user query, or falls back to general chat
     private String buildPrompt(@NotBlank(message = "Question cannot be empty") String question, String contextText) {
         if (contextText != null && !contextText.isBlank()) {
             return String.format("""
@@ -114,6 +117,7 @@ public class RagServiceImpl implements RagService {
         }
     }
 
+    // Formats retrieved chunks with file name and page number headers for LLM readability
     private String buildContextString(List<Document> similarityDocuments) {
         if (similarityDocuments == null || similarityDocuments.isEmpty()) {
             log.debug("No document chunks available to build context string.");
@@ -128,6 +132,7 @@ public class RagServiceImpl implements RagService {
                 .collect(Collectors.joining("\n\n---\n\n"));
     }
 
+    // Standalone vector similarity search without LLM generation (useful for previews or inspection)
     @Override
     public SearchResultDto searchSimilarChunks(SearchRequestDto request) {
         log.info("Searching similar chunks for query: '{}', docId: {}, topK: {}", request.getQuery(), request.getDocumentId(), request.getTopK());
@@ -151,6 +156,7 @@ public class RagServiceImpl implements RagService {
                 .build();
     }
 
+    // Converts raw vector store metadata into a clean CitationDto for frontend display
     private CitationDto mapToCitation(Document document) {
         Map<String, Object> meta = document.getMetadata();
         UUID docId = null;
@@ -191,6 +197,7 @@ public class RagServiceImpl implements RagService {
                 .build();
     }
 
+    // Core vector search: queries PgVector using embeddings, top-K count, and optional documentId filter
     private List<Document> retrieveRelevantDocuments(@NotBlank(message = "Query cannot be empty") String query,
                                                      UUID documentId,
                                                      Integer topK,
