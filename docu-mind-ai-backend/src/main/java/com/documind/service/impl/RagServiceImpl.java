@@ -2,6 +2,7 @@ package com.documind.service.impl;
 
 import com.documind.config.AppProperties;
 import com.documind.dto.*;
+import com.documind.entity.User;
 import com.documind.service.RagService;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +11,7 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.ai.vectorstore.filter.Filter;
 import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
@@ -31,16 +33,19 @@ public class RagServiceImpl implements RagService {
 
     // Synchronous Q&A: finds relevant chunks, builds prompt with context, and returns answer with citations
     @Override
-    public ChatResponseDto askQuestion(ChatRequestDto request) {
+    public ChatResponseDto askQuestion(ChatRequestDto request, User user) {
+
         long startTime = System.currentTimeMillis();
         String convId = request.getConversationId() != null ? request.getConversationId() : UUID.randomUUID().toString();
-        log.info("Processing Q&A query: '{}' [conversationId: {}, scoped docId: {}]", request.getQuestion(), convId, request.getDocumentId());
+        log.info("Processing Q&A query: '{}' [conversationId: {}, scoped docId: {}, userId: {}]", 
+                request.getQuestion(), convId, request.getDocumentId(), user.getId());
 
         List<Document> similarityDocuments = this.retrieveRelevantDocuments(
                 request.getQuestion(),
                 request.getDocumentId(),
                 request.getTopK(),
-                request.getMinSimilarity()
+                request.getMinSimilarity(),
+                user
         );
 
         List<CitationDto> citationDtos = similarityDocuments.stream()
@@ -58,7 +63,8 @@ public class RagServiceImpl implements RagService {
                 .content();
 
         long responseTime = System.currentTimeMillis() - startTime;
-        log.info("Completed Q&A for conversationId: '{}' in {} ms with {} citations", convId, responseTime, citationDtos.size());
+        log.info("Completed Q&A for conversationId: '{}' in {} ms with {} citations (userId: {})", 
+                convId, responseTime, citationDtos.size(), user.getId());
 
         return ChatResponseDto.builder()
                 .answer(answer)
@@ -70,15 +76,17 @@ public class RagServiceImpl implements RagService {
 
     // Streaming Q&A: streams response tokens word-by-word via Flux (SSE) for a real-time typing feel
     @Override
-    public Flux<String> streamQuestionAnswer(ChatRequestDto request) {
+    public Flux<String> streamQuestionAnswer(ChatRequestDto request, User user) {
         String convId = request.getConversationId() != null ? request.getConversationId() : UUID.randomUUID().toString();
-        log.info("Initiating streaming Q&A: '{}' [conversationId: {}, scoped docId: {}]", request.getQuestion(), convId, request.getDocumentId());
+        log.info("Initiating streaming Q&A: '{}' [conversationId: {}, scoped docId: {}, userId: {}]", 
+                request.getQuestion(), convId, request.getDocumentId(), user.getId());
 
         List<Document> similarityDocuments = this.retrieveRelevantDocuments(
                 request.getQuestion(),
                 request.getDocumentId(),
                 request.getTopK(),
-                request.getMinSimilarity()
+                request.getMinSimilarity(),
+                user
         );
 
         String contextText = buildContextString(similarityDocuments);
@@ -88,8 +96,8 @@ public class RagServiceImpl implements RagService {
                 .user(prompt)
                 .stream()
                 .content()
-                .doOnComplete(() -> log.info("Finished streaming response for conversationId: '{}'", convId))
-                .doOnError(e -> log.error("Error during streaming for conversationId: '{}'", convId, e));
+                .doOnComplete(() -> log.info("Finished streaming response for conversationId: '{}' (userId: {})", convId, user.getId()))
+                .doOnError(e -> log.error("Error during streaming for conversationId: '{}' (userId: {})", convId, user.getId(), e));
     }
 
     // Grounds the LLM by combining retrieved document chunks with user query, or falls back to general chat
@@ -134,20 +142,23 @@ public class RagServiceImpl implements RagService {
 
     // Standalone vector similarity search without LLM generation (useful for previews or inspection)
     @Override
-    public SearchResultDto searchSimilarChunks(SearchRequestDto request) {
-        log.info("Searching similar chunks for query: '{}', docId: {}, topK: {}", request.getQuery(), request.getDocumentId(), request.getTopK());
+    public SearchResultDto searchSimilarChunks(SearchRequestDto request, User user) {
+        log.info("Searching similar chunks for query: '{}', docId: {}, topK: {}, userId: {}", 
+                request.getQuery(), request.getDocumentId(), request.getTopK(), user.getId());
 
         List<Document> matchesDocs = retrieveRelevantDocuments(
                 request.getQuery(),
                 request.getDocumentId(),
                 request.getTopK(),
-                request.getSimilaritySearch());
+                request.getSimilaritySearch(),
+                user
+        );
 
         List<CitationDto> citations = matchesDocs.stream()
                 .map(this::mapToCitation)
                 .toList();
 
-        log.info("Found {} matching chunks for query: '{}'", citations.size(), request.getQuery());
+        log.info("Found {} matching chunks for query: '{}' (userId: {})", citations.size(), request.getQuery(), user.getId());
 
         return SearchResultDto.builder()
                 .query(request.getQuery())
@@ -201,7 +212,9 @@ public class RagServiceImpl implements RagService {
     private List<Document> retrieveRelevantDocuments(@NotBlank(message = "Query cannot be empty") String query,
                                                      UUID documentId,
                                                      Integer topK,
-                                                     Double similaritySearch) {
+                                                     Double similaritySearch,
+                                                     User user
+    ) {
 
         int effectiveTopK = (topK != null && topK > 0) ? topK : appProperties.getRag().getTopK();
         double effectiveSimilaritySearch = (similaritySearch != null) ? similaritySearch : appProperties.getRag().getSimilarityThreshold();
@@ -214,19 +227,29 @@ public class RagServiceImpl implements RagService {
             searchRequestBuilder.similarityThreshold(effectiveSimilaritySearch);
         }
 
+        FilterExpressionBuilder b = new FilterExpressionBuilder();
+        Filter.Expression filterExpression;
+
         if (documentId != null) {
-            log.debug("Scoping vector search to documentId: {}", documentId);
-            FilterExpressionBuilder builder = new FilterExpressionBuilder();
-            searchRequestBuilder.filterExpression(builder.eq("documentId", documentId.toString()).build());
+            log.debug("Scoping vector search to documentId: {} and userId: {}", documentId, user.getId());
+            filterExpression =
+                    b.and(
+                            b.eq("userId", user.getId().toString()),
+                            b.eq("documentId", documentId.toString())
+                    ).build();
+        } else {
+            filterExpression = b.eq("userId", user.getId().toString()).build();
         }
+        searchRequestBuilder.filterExpression(filterExpression);
 
         try {
             List<Document> documents = vectorStore.similaritySearch(searchRequestBuilder.build());
-            log.info("Retrieved {} chunks from vector store for query: '{}' (scoped docId: {})", documents.size(), query, documentId);
+            log.info("Retrieved {} chunks from vector store for query: '{}' (scoped docId: {}, userId: {})", 
+                    documents.size(), query, documentId, user.getId());
             return documents;
 
         } catch (Exception e) {
-            log.error("Similarity search failed in vector store for query: '{}'", query, e);
+            log.error("Similarity search failed in vector store for query: '{}' (userId: {})", query, user.getId(), e);
             return Collections.emptyList();
         }
     }

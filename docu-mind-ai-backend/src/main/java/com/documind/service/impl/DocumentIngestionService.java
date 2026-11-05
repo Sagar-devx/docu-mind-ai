@@ -29,7 +29,8 @@ public class DocumentIngestionService {
     // Takes parsed document text, chops it into vector-friendly chunks, enriches metadata, and saves embeddings
     public int ingest(List<Document> parsedDocs, DocumentMetaData documentMetaData) {
 
-        log.info("Ingesting document: {} with {} chunks", documentMetaData.getFileName(), parsedDocs.size());
+        log.info("Ingesting document: {} (userId: {}) with {} parsed pages", 
+                documentMetaData.getFileName(), documentMetaData.getUser().getId(), parsedDocs.size());
 
         try {
             documentMetaData.setStatus(DocumentStatus.PROCESSING);
@@ -64,6 +65,7 @@ public class DocumentIngestionService {
                 enrichedMetadata.put("chunkIndex", i);
                 enrichedMetadata.put("fileName", documentMetaData.getFileName());
                 enrichedMetadata.put("contentType", documentMetaData.getContentType());
+                enrichedMetadata.put("userId", documentMetaData.getUser().getId().toString());
 
                 Object pageNumber = chunk.getMetadata().get("page_number");
 
@@ -76,7 +78,8 @@ public class DocumentIngestionService {
                 Document enrichedChunk = new Document(chunk.getText(), enrichedMetadata);
                 enrichedChunks.add(enrichedChunk);
             }
-            log.info("Ingesting {} chunks for document: {}", enrichedChunks.size(), documentMetaData.getFileName());
+            log.info("Ingesting {} chunks for document: {} (userId: {})", 
+                    enrichedChunks.size(), documentMetaData.getFileName(), documentMetaData.getUser().getId());
 
             // 3. Generate embeddings and store vectors into PgVector
             vectorStore.add(enrichedChunks);
@@ -85,11 +88,13 @@ public class DocumentIngestionService {
             documentMetaData.setErrorMessage(null);
             documentMetadataRepository.save(documentMetaData);
 
-            log.info("Document ingestion completed for document: {} with {} chunks", documentMetaData.getFileName(), enrichedChunks.size());
+            log.info("Document ingestion completed for document: {} with {} chunks (userId: {})", 
+                    documentMetaData.getFileName(), enrichedChunks.size(), documentMetaData.getUser().getId());
             return enrichedChunks.size();
 
         } catch (Exception e) {
-            log.error("Error occurred while ingesting document: {}", documentMetaData.getFileName(), e);
+            log.error("Error occurred while ingesting document: {} (userId: {})", 
+                    documentMetaData.getFileName(), documentMetaData.getUser().getId(), e);
 
             documentMetaData.setStatus(DocumentStatus.FAILED);
             documentMetaData.setErrorMessage("An error occurred while ingesting the document: " + e.getMessage());
@@ -99,4 +104,3 @@ public class DocumentIngestionService {
 
     }
 }
-

@@ -4,6 +4,8 @@ import com.documind.dto.DocumentMetadataDto;
 import com.documind.dto.DocumentResponseDto;
 import com.documind.entity.DocumentMetaData;
 import com.documind.entity.DocumentStatus;
+import com.documind.entity.Role;
+import com.documind.entity.User;
 import com.documind.exception.DocumentProcessingException;
 import com.documind.exception.ResourceNotFoundException;
 import com.documind.repository.DocumentMetadataRepository;
@@ -35,7 +37,7 @@ public class DocumentMetadataServiceImpl implements DocumentMetadataService {
 
     // Handles single file upload: creates initial metadata, parses content, and triggers vector ingestion
     @Override
-    public DocumentResponseDto uploadandProcess(MultipartFile file) {
+    public DocumentResponseDto uploadandProcess(MultipartFile file, User user) {
 
         String fileName = file.getOriginalFilename() != null ? file.getOriginalFilename() : "document";
         String contentType = file.getContentType() != null ? file.getContentType().toLowerCase() : "application/octet-stream";
@@ -46,6 +48,7 @@ public class DocumentMetadataServiceImpl implements DocumentMetadataService {
                 .contentType(contentType)
                 .fileSize(file.getSize())
                 .createdAt(LocalDateTime.now())
+                .user(user)
                 .build();
 
         documentMetaData = documentMetadataRepository.save(documentMetaData);
@@ -57,9 +60,8 @@ public class DocumentMetadataServiceImpl implements DocumentMetadataService {
 
             chunksCreated = ingestionService.ingest(parsedDocs, documentMetaData);
 
-        }catch (DocumentProcessingException e)
-        {
-            log.info("Document metadata deleting due to fail processing");
+        } catch (DocumentProcessingException e) {
+            log.warn("Deleting document metadata for file '{}' due to ingestion failure", documentMetaData.getFileName());
             documentMetadataRepository.delete(documentMetaData);
             throw e;
         }
@@ -70,24 +72,25 @@ public class DocumentMetadataServiceImpl implements DocumentMetadataService {
                 .fileSize(documentMetaData.getFileSize())
                 .status(documentMetaData.getStatus())
                 .chunksCreated(chunksCreated)
+                .userId(user.getId())
                 .message("Document uploaded and processed successfully.")
                 .build();
     }
 
     // Loops through multiple uploaded files and processes each one sequentially
     @Override
-    public List<DocumentResponseDto> uploadMultipleDocuments(List<MultipartFile> files) {
+    public List<DocumentResponseDto> uploadMultipleDocuments(List<MultipartFile> files, User user) {
 
         List<DocumentResponseDto> responseDtos = new ArrayList<>();
 
         for (MultipartFile multipartFile : files) {
-            DocumentResponseDto result = this.uploadandProcess(multipartFile);
+            DocumentResponseDto result = this.uploadandProcess(multipartFile, user);
             responseDtos.add(result);
         }
         return responseDtos;
     }
 
-    // Fetches all documents sorted by newest first
+    // Fetches all documents sorted by newest first for admin only
     @Override
     public List<DocumentMetadataDto> getAllDocuments() {
 
@@ -98,22 +101,41 @@ public class DocumentMetadataServiceImpl implements DocumentMetadataService {
                 .toList();
     }
 
-    // Fetches a single document's metadata by its ID
     @Override
-    public DocumentMetadataDto getDocumentById(UUID id) {
+    public List<DocumentMetadataDto> getAllDocumentsByUser(User user) {
+        List<DocumentMetaData> documents = documentMetadataRepository.findByUserOrderByCreatedAtDesc(user);
+        return documents.stream()
+                .map(documentMetaData -> modelMapper.map(documentMetaData, DocumentMetadataDto.class))
+                .toList();
+    }
 
-        DocumentMetaData documentMetaData = documentMetadataRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Document with given id is not found"));
+    // Fetches a single document's metadata by its ID and user
+    @Override
+    public DocumentMetadataDto getDocumentById(UUID id, User user) {
+        DocumentMetaData documentMetaData;
+        if (user.getRole() == Role.ADMIN) {
+            documentMetaData = documentMetadataRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("Document with given id is not found"));
+        } else {
+            documentMetaData = documentMetadataRepository.findByIdAndUser(id, user)
+                    .orElseThrow(() -> new ResourceNotFoundException("Document with given id is not found for the user"));
+        }
         return modelMapper.map(documentMetaData, DocumentMetadataDto.class);
     }
 
     // Atomic cleanup: deletes vector chunks from documind_vector_store first, then deletes metadata
     @Transactional
     @Override
-    public void deleteDocument(UUID id) {
+    public void deleteDocument(UUID id, User user) {
+        DocumentMetaData documentMetaData;
+        if (user.getRole() == Role.ADMIN) {
+            documentMetaData = documentMetadataRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("Document with given id is not found"));
+        } else {
+            documentMetaData = documentMetadataRepository.findByIdAndUser(id, user)
+                    .orElseThrow(() -> new ResourceNotFoundException("Document with given id is not found for the user"));
+        }
 
-        DocumentMetaData documentMetaData = documentMetadataRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Document with given id is not found"));
         try {
             String deleteVectorSql = "DELETE FROM documind_vector_store WHERE metadata->>'documentId' = ?";
             int deleteCount = jdbcTemplate.update(deleteVectorSql, id.toString());
@@ -123,7 +145,6 @@ public class DocumentMetadataServiceImpl implements DocumentMetadataService {
         }
 
         documentMetadataRepository.delete(documentMetaData);
-        log.info("Deleted document metadata for id: {}", id);
+        log.info("Deleted document metadata for id: {} by userId: {}", id, user.getId());
     }
 }
-

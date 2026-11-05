@@ -1,13 +1,16 @@
 package com.documind.controller;
 
 import com.documind.dto.*;
+import com.documind.entity.User;
 import com.documind.service.RagService;
+import com.documind.service.impl.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -33,9 +36,12 @@ public class ChatController {
             description = "Performs vector similarity search on ingested documents, builds an augmented prompt with retrieved context, and returns the LLM response with citations."
     )
     public ResponseEntity<ApiResponse<ChatResponseDto>> askQuestion(
-            @Valid @RequestBody ChatRequestDto requestDto
+            @Valid @RequestBody ChatRequestDto requestDto,
+            Authentication authentication
     ) {
-        ChatResponseDto chatResponseDto = ragService.askQuestion(requestDto);
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        User user = userDetails.getUser();
+        ChatResponseDto chatResponseDto = ragService.askQuestion(requestDto, user);
         return ResponseEntity.ok(
                 ApiResponse.<ChatResponseDto>builder()
                         .success(true)
@@ -52,9 +58,13 @@ public class ChatController {
             description = "Streams LLM answer tokens in real-time as Server-Sent Events (SSE) based on relevant document chunks."
     )
     public Flux<String> streamQuestion(
-            @Valid @RequestBody ChatRequestDto requestDto
+            @Valid @RequestBody ChatRequestDto requestDto,
+            Authentication authentication
     ) {
-        return ragService.streamQuestionAnswer(requestDto);
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        User user = userDetails.getUser();
+
+        return ragService.streamQuestionAnswer(requestDto, user);
     }
 
     @PostMapping("/search/similarity")
@@ -63,9 +73,12 @@ public class ChatController {
             description = "Performs semantic similarity search against the PgVector store without invoking the LLM, returning relevant matching text chunks and citations."
     )
     public ResponseEntity<ApiResponse<SearchResultDto>> searchSimilar(
-            @Valid @RequestBody SearchRequestDto requestDto
+            @Valid @RequestBody SearchRequestDto requestDto,
+            Authentication authentication
     ) {
-        SearchResultDto searchResultDto = ragService.searchSimilarChunks(requestDto);
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        User user = userDetails.getUser();
+        SearchResultDto searchResultDto = ragService.searchSimilarChunks(requestDto, user);
         return ResponseEntity.ok(
                 ApiResponse.<SearchResultDto>builder()
                         .success(true)
