@@ -13,13 +13,13 @@ spring:
       hibernate:
         format_sql: true
 
-  # File upload limits
+# File upload limits
   servlet:
     multipart:
       max-file-size: 25MB
       max-request-size: 50MB
 
-  # AI Model Configuration (Groq / OpenAI compatible)
+# AI Model Configuration (Groq / OpenAI compatible)
   ai:
     openai:
       base-url: "https://api.groq.com/openai/v1"
@@ -30,7 +30,7 @@ spring:
       embedding:
         enabled: false
 
-    # Vector Store Configuration
+# Vector Store Configuration
     vectorstore:
       pgvector:
         index-type: HNSW
@@ -55,6 +55,12 @@ app:
     allowed-origins: "*"
     allowed-methods: "*"
     allowed-headers: "*"
+
+#Jwt Configuration
+jwt:
+  secret: ${JWT_SECRET:yureikdfghbvncksiytrueiosdjfhvnmcxkiduyudjxcjhfytghnjfdirtyhgfds}
+  expiration: 3600000
+
 
 # Gemini Configuration
 gemini:

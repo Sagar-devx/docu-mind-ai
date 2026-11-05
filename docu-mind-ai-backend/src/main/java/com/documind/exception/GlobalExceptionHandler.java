@@ -4,6 +4,7 @@ import com.documind.dto.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -17,9 +18,22 @@ import java.util.Map;
 @Slf4j
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<?> handleBadCredentialsException(BadCredentialsException ex) {
+        log.warn("Authentication failed: {}", ex.getMessage());
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.builder()
+                        .success(false)
+                        .message("Invalid username or password.")
+                        .data(null)
+                        .timeStamp(LocalDateTime.now())
+                        .build()
+                );
+    }
+
     @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<?> handleNotFoundException(ResourceNotFoundException ex)
-    {
+    public ResponseEntity<?> handleNotFoundException(ResourceNotFoundException ex) {
         log.warn("Resource not found: {}", ex.getMessage());
 
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -29,12 +43,11 @@ public class GlobalExceptionHandler {
                         .data(null)
                         .timeStamp(LocalDateTime.now())
                         .build()
-        );
+                );
     }
 
     @ExceptionHandler(DocumentProcessingException.class)
-    public ResponseEntity<Object> handleProcessingException(DocumentProcessingException ex)
-    {
+    public ResponseEntity<Object> handleProcessingException(DocumentProcessingException ex) {
         log.warn("Document processing error: {}", ex.getMessage());
 
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT)
@@ -65,7 +78,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Map<String, String>>> handleMethodArgumentNotValidException(MethodArgumentNotValidException ex) {
         log.warn("Invalid method argument: {}", ex.getMessage());
 
-       Map<String, String> errors = new HashMap<>();
+        Map<String, String> errors = new HashMap<>();
 
         ex.getBindingResult().getFieldErrors().forEach(error -> {
             errors.put(error.getField(), error.getDefaultMessage());
