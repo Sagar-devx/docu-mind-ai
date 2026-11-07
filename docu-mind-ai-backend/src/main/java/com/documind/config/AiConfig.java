@@ -1,6 +1,8 @@
 package com.documind.config;
 
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
+import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.embedding.Embedding;
 import org.springframework.ai.embedding.EmbeddingModel;
@@ -21,7 +23,7 @@ import java.util.Map;
 public class AiConfig {
 
     @Bean
-    public ChatClient chatClient(ChatClient.Builder builder)
+    public ChatClient chatClient(ChatClient.Builder builder, ChatMemory chatMemory)
     {
         return builder
                 .defaultSystem("""
@@ -41,6 +43,7 @@ public class AiConfig {
                         
                         
                         """)
+                .defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory).build())
                 .build();
     }
 

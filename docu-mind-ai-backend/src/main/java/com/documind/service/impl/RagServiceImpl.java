@@ -2,12 +2,15 @@ package com.documind.service.impl;
 
 import com.documind.config.AppProperties;
 import com.documind.dto.*;
+import com.documind.entity.Conversation;
 import com.documind.entity.User;
+import com.documind.repository.ConversationRepository;
 import com.documind.service.RagService;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
@@ -16,6 +19,7 @@ import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -30,15 +34,21 @@ public class RagServiceImpl implements RagService {
     private final VectorStore vectorStore;
     private final AppProperties appProperties;
     private final ChatClient chatClient;
+    private final ConversationRepository conversationRepository;
 
     // Synchronous Q&A: finds relevant chunks, builds prompt with context, and returns answer with citations
     @Override
     public ChatResponseDto askQuestion(ChatRequestDto request, User user) {
 
+        String conversationId = (request.getConversationId() != null && !request.getConversationId().isBlank())
+                ? request.getConversationId()
+                : UUID.randomUUID().toString();
+
+        ensureConversationExists(conversationId, user, request.getQuestion());
+
         long startTime = System.currentTimeMillis();
-        String convId = request.getConversationId() != null ? request.getConversationId() : UUID.randomUUID().toString();
-        log.info("Processing Q&A query: '{}' [conversationId: {}, scoped docId: {}, userId: {}]", 
-                request.getQuestion(), convId, request.getDocumentId(), user.getId());
+        log.info("Processing Q&A query: '{}' [conversationId: {}, scoped docId: {}, userId: {}]",
+                request.getQuestion(), conversationId, request.getDocumentId(), user.getId());
 
         List<Document> similarityDocuments = this.retrieveRelevantDocuments(
                 request.getQuestion(),
@@ -53,33 +63,56 @@ public class RagServiceImpl implements RagService {
                 .toList();
 
         String contextText = buildContextString(similarityDocuments);
-        String prompt = buildPrompt(request.getQuestion(), contextText);
 
-        log.debug("Sending prompt to LLM for conversationId: {} (context length: {} chars)", convId, contextText.length());
+        log.debug("Sending prompt to LLM for conversationId: {} (context length: {} chars)", conversationId, contextText.length());
 
-        String answer = this.chatClient.prompt()
-                .user(prompt)
+        String answer = this.chatClient
+                .prompt()
+                .system(system -> system.param("doc_context", contextText))
+                .advisors(advisor -> advisor.param(ChatMemory.CONVERSATION_ID, conversationId))
+                .user(request.getQuestion())
                 .call()
                 .content();
 
         long responseTime = System.currentTimeMillis() - startTime;
-        log.info("Completed Q&A for conversationId: '{}' in {} ms with {} citations (userId: {})", 
-                convId, responseTime, citationDtos.size(), user.getId());
+        log.info("Completed Q&A for conversationId: '{}' in {} ms with {} citations (userId: {})",
+                conversationId, responseTime, citationDtos.size(), user.getId());
 
         return ChatResponseDto.builder()
                 .answer(answer)
-                .conversationId(convId)
+                .conversationId(conversationId)
                 .citations(citationDtos)
                 .responseTimeMs(responseTime)
                 .build();
     }
 
+    private void ensureConversationExists(String conversationId, User user, @NotBlank(message = "Question cannot be empty") String question) {
+
+        conversationRepository.findByIdAndUser(conversationId, user)
+                .orElseGet(() -> {
+                    String title = question.length() > 50 ? question.substring(0, 47) + "..." : question;
+                    return conversationRepository.save(
+                            Conversation.builder()
+                                    .id(conversationId)
+                                    .user(user)
+                                    .title(title)
+                                    .createdAt(LocalDateTime.now())
+                                    .updatedAt(LocalDateTime.now())
+                                    .build()
+                    );
+                });
+    }
+
     // Streaming Q&A: streams response tokens word-by-word via Flux (SSE) for a real-time typing feel
     @Override
     public Flux<String> streamQuestionAnswer(ChatRequestDto request, User user) {
-        String convId = request.getConversationId() != null ? request.getConversationId() : UUID.randomUUID().toString();
-        log.info("Initiating streaming Q&A: '{}' [conversationId: {}, scoped docId: {}, userId: {}]", 
-                request.getQuestion(), convId, request.getDocumentId(), user.getId());
+
+        String conversationId = (request.getConversationId() != null && !request.getConversationId().isBlank())
+                ? request.getConversationId()
+                : UUID.randomUUID().toString();
+        ensureConversationExists(conversationId, user, request.getQuestion());
+        log.info("Initiating streaming Q&A: '{}' [conversationId: {}, scoped docId: {}, userId: {}]",
+                request.getQuestion(), conversationId, request.getDocumentId(), user.getId());
 
         List<Document> similarityDocuments = this.retrieveRelevantDocuments(
                 request.getQuestion(),
@@ -90,39 +123,15 @@ public class RagServiceImpl implements RagService {
         );
 
         String contextText = buildContextString(similarityDocuments);
-        String prompt = buildPrompt(request.getQuestion(), contextText);
 
         return chatClient.prompt()
-                .user(prompt)
+                .system(system -> system.param("doc_context", contextText))
+                .user(request.getQuestion())
+                .advisors(advisor -> advisor.param(ChatMemory.CONVERSATION_ID, conversationId))
                 .stream()
                 .content()
-                .doOnComplete(() -> log.info("Finished streaming response for conversationId: '{}' (userId: {})", convId, user.getId()))
-                .doOnError(e -> log.error("Error during streaming for conversationId: '{}' (userId: {})", convId, user.getId(), e));
-    }
-
-    // Grounds the LLM by combining retrieved document chunks with user query, or falls back to general chat
-    private String buildPrompt(@NotBlank(message = "Question cannot be empty") String question, String contextText) {
-        if (contextText != null && !contextText.isBlank()) {
-            return String.format("""
-                           Document Context:
-                           ---------------------
-                           %s
-                           ---------------------                                        
-                           User Message / Question: %s             
-                           Instructions:
-                           - If the user's question relates to the document context above, prioritize answering using that context and reference key sections.
-                           - If the user is asking a general question, greeting, or discussing topics beyond the document context, respond helpfully and conversationally using your general knowledge while weaving in relevant document context if applicable.
-                    
-                    """, contextText, question);
-        } else {
-            return String.format("""
-                       User Message / Question:
-                       %s                         
-                       Instructions:
-                          - Respond helpfully, accurately, and conversationally to the user's message using your broad knowledge base.
-                    
-                    """, question);
-        }
+                .doOnComplete(() -> log.info("Finished streaming response for conversationId: '{}' (userId: {})", conversationId, user.getId()))
+                .doOnError(e -> log.error("Error during streaming for conversationId: '{}' (userId: {})", conversationId, user.getId(), e));
     }
 
     // Formats retrieved chunks with file name and page number headers for LLM readability
@@ -143,7 +152,7 @@ public class RagServiceImpl implements RagService {
     // Standalone vector similarity search without LLM generation (useful for previews or inspection)
     @Override
     public SearchResultDto searchSimilarChunks(SearchRequestDto request, User user) {
-        log.info("Searching similar chunks for query: '{}', docId: {}, topK: {}, userId: {}", 
+        log.info("Searching similar chunks for query: '{}', docId: {}, topK: {}, userId: {}",
                 request.getQuery(), request.getDocumentId(), request.getTopK(), user.getId());
 
         List<Document> matchesDocs = retrieveRelevantDocuments(
@@ -244,7 +253,7 @@ public class RagServiceImpl implements RagService {
 
         try {
             List<Document> documents = vectorStore.similaritySearch(searchRequestBuilder.build());
-            log.info("Retrieved {} chunks from vector store for query: '{}' (scoped docId: {}, userId: {})", 
+            log.info("Retrieved {} chunks from vector store for query: '{}' (scoped docId: {}, userId: {})",
                     documents.size(), query, documentId, user.getId());
             return documents;
 
