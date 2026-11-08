@@ -32,7 +32,7 @@ public class DocumentMetaData {
     @Enumerated(EnumType.STRING)
     private DocumentStatus status;
 
-    @Column(length = 1000)
+    @Column(columnDefinition = "TEXT")
     private String errorMessage;
 
     @Column(nullable = false, updatable = false)

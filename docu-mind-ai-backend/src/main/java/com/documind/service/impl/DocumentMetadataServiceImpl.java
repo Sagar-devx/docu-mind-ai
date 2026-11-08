@@ -44,7 +44,7 @@ public class DocumentMetadataServiceImpl implements DocumentMetadataService {
 
         DocumentMetaData documentMetaData = DocumentMetaData.builder()
                 .fileName(fileName)
-                .status(DocumentStatus.UPLOADING)
+                .status(DocumentStatus.PROCESSING)
                 .contentType(contentType)
                 .fileSize(file.getSize())
                 .createdAt(LocalDateTime.now())
@@ -53,27 +53,28 @@ public class DocumentMetadataServiceImpl implements DocumentMetadataService {
 
         documentMetaData = documentMetadataRepository.save(documentMetaData);
 
-        List<Document> parsedDocs = null;
-        int chunksCreated = 0;
+        List<Document> parsedDocs;
         try {
             parsedDocs = parserService.parse(file);
-
-            chunksCreated = ingestionService.ingest(parsedDocs, documentMetaData);
-
-        } catch (DocumentProcessingException e) {
-            log.warn("Deleting document metadata for file '{}' due to ingestion failure", documentMetaData.getFileName());
-            documentMetadataRepository.delete(documentMetaData);
-            throw e;
+        } catch (Exception e) {
+            log.error("Failed to parse document '{}': {}", fileName, e.getMessage());
+            documentMetaData.setStatus(DocumentStatus.FAILED);
+            documentMetaData.setErrorMessage("Failed to parse document: " + e.getMessage());
+            documentMetadataRepository.save(documentMetaData);
+            throw new DocumentProcessingException("Failed to parse file: " + fileName, e);
         }
+
+        // Fire asynchronous vectorization in background thread to unblock HTTP response immediately
+        ingestionService.ingestAsync(parsedDocs, documentMetaData.getId());
 
         return DocumentResponseDto.builder()
                 .id(documentMetaData.getId())
                 .fileName(documentMetaData.getFileName())
                 .fileSize(documentMetaData.getFileSize())
-                .status(documentMetaData.getStatus())
-                .chunksCreated(chunksCreated)
+                .status(DocumentStatus.PROCESSING)
+                .chunksCreated(0)
                 .userId(user.getId())
-                .message("Document uploaded and processed successfully.")
+                .message("Document uploaded. Indexing in progress...")
                 .build();
     }
 

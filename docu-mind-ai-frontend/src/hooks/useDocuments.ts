@@ -1,19 +1,33 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { documentService } from '../services/documentService';
+import { useAuth } from '../context/AuthContext';
 import type { DocumentMetadataDto } from '../types';
 
-export const useDocuments = () =>
-  useQuery<DocumentMetadataDto[]>({
-    queryKey: ['documents'],
-    queryFn: documentService.getAllDocuments,
-    staleTime: 30000,
+export const useDocuments = () => {
+  const { user } = useAuth();
+  return useQuery<DocumentMetadataDto[]>({
+    queryKey: ['documents', user?.id],
+    queryFn: () => documentService.getUserDocuments(),
+    enabled: !!user,
+    staleTime: 5000,
+    refetchInterval: (query) => {
+      const hasActive = query.state.data?.some(
+        (d) => d.status === 'PROCESSING' || d.status === 'UPLOADING' || d.status === 'PENDING'
+      );
+      return hasActive ? 2500 : false;
+    },
   });
+};
 
 export const useDocument = (id: string) =>
   useQuery<DocumentMetadataDto>({
     queryKey: ['document', id],
     queryFn: () => documentService.getDocumentById(id),
     enabled: !!id,
+    refetchInterval: (query) => {
+      const s = query.state.data?.status;
+      return s === 'PROCESSING' || s === 'UPLOADING' || s === 'PENDING' ? 2500 : false;
+    },
   });
 
 export const useUploadDocument = () => {

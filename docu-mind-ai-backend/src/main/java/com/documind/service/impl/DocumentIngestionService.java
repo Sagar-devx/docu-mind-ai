@@ -10,12 +10,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 @Slf4j
@@ -81,6 +83,13 @@ public class DocumentIngestionService {
             log.info("Ingesting {} chunks for document: {} (userId: {})", 
                     enrichedChunks.size(), documentMetaData.getFileName(), documentMetaData.getUser().getId());
 
+            if (enrichedChunks.size() > appProperties.getRag().getMaxNumChunks()) {
+                throw new DocumentProcessingException(
+                        "Document produced " + enrichedChunks.size() + " chunks, exceeding the allowed limit of "
+                                + appProperties.getRag().getMaxNumChunks() + " chunks for Free Tier quota. Please upload a smaller section or split the PDF."
+                );
+            }
+
             // 3. Generate embeddings and store vectors into PgVector
             vectorStore.add(enrichedChunks);
             documentMetaData.setStatus(DocumentStatus.INDEXED);
@@ -96,11 +105,34 @@ public class DocumentIngestionService {
             log.error("Error occurred while ingesting document: {} (userId: {})", 
                     documentMetaData.getFileName(), documentMetaData.getUser().getId(), e);
 
+            String errorMsg = e.getMessage() != null ? e.getMessage() : "An error occurred while ingesting the document";
+            if (errorMsg.length() > 2000) {
+                errorMsg = errorMsg.substring(0, 1997) + "...";
+            }
+
             documentMetaData.setStatus(DocumentStatus.FAILED);
-            documentMetaData.setErrorMessage("An error occurred while ingesting the document: " + e.getMessage());
+            documentMetaData.setErrorMessage(errorMsg);
             documentMetadataRepository.save(documentMetaData);
-            throw new DocumentProcessingException("Failed to index document: " + documentMetaData.getFileName(), e);
+            throw new DocumentProcessingException(errorMsg, e);
         }
 
+    }
+
+    // Executes vector ingestion asynchronously in a background thread to prevent HTTP timeouts
+    @Async
+    public void ingestAsync(List<Document> parsedDocs, UUID documentId) {
+        log.info("Starting background async ingestion for documentId: {}", documentId);
+        DocumentMetaData documentMetaData = documentMetadataRepository.findById(documentId).orElse(null);
+        if (documentMetaData == null) {
+            log.error("Cannot perform async ingestion: Document not found with id: {}", documentId);
+            return;
+        }
+
+        try {
+            ingest(parsedDocs, documentMetaData);
+            log.info("Background async ingestion finished successfully for documentId: {}", documentId);
+        } catch (Exception e) {
+            log.error("Async background ingestion failed for documentId: {}", documentId, e);
+        }
     }
 }

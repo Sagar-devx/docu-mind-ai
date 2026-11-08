@@ -1,0 +1,65 @@
+server:
+  port: ${PORT:8080}
+
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1
+      idle-timeout: 300000
+      max-lifetime: 900000
+      connection-timeout: 30000
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+
+  servlet:
+    multipart:
+      max-file-size: 25MB
+      max-request-size: 50MB
+
+  ai:
+    openai:
+      base-url: "https://api.groq.com/openai/v1"
+      api-key: ${GROQ_API_KEY:}
+      chat:
+        model: "qwen/qwen3.8-27b"
+        temperature: 0.2
+      embedding:
+        enabled: false
+
+    vectorstore:
+      pgvector:
+        index-type: HNSW
+        distance-type: COSINE_DISTANCE
+        dimensions: 768
+        table-name: documind_vector_store
+        schema-name: public
+        initialize-schema: true
+
+app:
+  rag:
+    chunk-size: 700
+    chunk-overlap: 100
+    min-chunk-size-chars: 350
+    max-num-chunks: 500
+    min-chunk-length-to-embed: 5
+    top-k: 5
+    similarity-threshold: 0.4
+
+  cors:
+    allowed-origins: "${CORS_ALLOWED_ORIGINS:*}"
+    allowed-methods: "*"
+    allowed-headers: "*"
+
+jwt:
+  secret: ${JWT_SECRET:yureikdfghbvncksiytrueiosdjfhvnmcxkiduyudjxcjhfytghnjfdirtyhgfds}
+  expiration: 86400000
+
+gemini:
+  api-key: ${GEMINI_API_KEY:}

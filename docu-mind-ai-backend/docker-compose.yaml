@@ -5,7 +5,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_DB: documind
-      POSTGRES_USER: postgres
+      POSTGRES_USER: postgres/re
       POSTGRES_PASSWORD: postgres
     ports:
       - "5432:5432"

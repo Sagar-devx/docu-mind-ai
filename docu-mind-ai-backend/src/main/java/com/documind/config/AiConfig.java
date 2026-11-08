@@ -32,7 +32,12 @@ public class AiConfig {
                                                 1. Document-Grounded Q&A: When context from the user's uploaded documents is provided, prioritize and base your answer directly on that context, citing document names and page numbers when available.
                                                 2. General Knowledge & Conversation: If the user engages in general conversation (greetings, chit-chat, programming questions, math, explanations, summaries, or general knowledge) that may not be present in the uploaded documents, answer helpfully, accurately, and naturally.
                                                 3. Hybrid Synthesis: If the document context partially covers a topic, synthesize the document facts with your broader knowledge to give a complete, high-quality answer.
-                                                4. Tone & Format: Always be warm, professional, clear, and structured. Use Markdown (headings, bullet points, bold text, code blocks) to make responses easy to read.
+                                                4. Professional Formatting Guidelines:
+                                                   - Use structured Markdown headings (### Section Title) with relevant icons or numbers to cleanly divide content.
+                                                   - Format lists using bullet points (- **Item:** Description) for high readability.
+                                                   - Format contact information, repositories, or profiles as clickable Markdown links (e.g. [LinkedIn](https://...), [GitHub](https://...)).
+                                                   - For comparisons, grades, or structured data, use clean Markdown tables.
+                                                   - Conclude comprehensive answers with an executive callout block (> **Summary:** ...).
                         
                         
                                                 Document Context is :
@@ -59,12 +64,87 @@ public class AiConfig {
                 .build();
 
         return new EmbeddingModel() {
+            private static final int BATCH_SIZE = 50;
+
             @Override
             public EmbeddingResponse call(EmbeddingRequest request) {
-
+                List<String> instructions = request.getInstructions();
                 List<Embedding> embeddings = new ArrayList<>();
+
+                if (instructions == null || instructions.isEmpty()) {
+                    return new EmbeddingResponse(embeddings);
+                }
+
+                // If single text (e.g. search query or single chunk), use fast direct call
+                if (instructions.size() == 1) {
+                    float[] vec = embedSingle(instructions.get(0));
+                    if (vec != null) {
+                        embeddings.add(new Embedding(vec, 0));
+                    }
+                    return new EmbeddingResponse(embeddings);
+                }
+
+                // For multiple chunks, process in batches of 50 via batchEmbedContents
                 int idx = 0;
-                for (String text : request.getInstructions()) {
+                for (int i = 0; i < instructions.size(); i += BATCH_SIZE) {
+                    List<String> batch = instructions.subList(i, Math.min(i + BATCH_SIZE, instructions.size()));
+                    List<Map<String, Object>> batchRequests = new ArrayList<>();
+                    for (String text : batch) {
+                        batchRequests.add(Map.of(
+                                "model", "models/gemini-embedding-001",
+                                "content", Map.of("parts", List.of(Map.of("text", text))),
+                                "outputDimensionality", 768
+                        ));
+                    }
+
+                    boolean batchSuccess = false;
+                    try {
+                        Map response = restClient.post()
+                                .uri("https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:batchEmbedContents")
+                                .header("Content-Type", "application/json")
+                                .header("x-goog-api-key", apiKey)
+                                .body(Map.of("requests", batchRequests))
+                                .retrieve()
+                                .body(Map.class);
+
+                        if (response != null && response.containsKey("embeddings")) {
+                            List<Map> embeddingList = (List<Map>) response.get("embeddings");
+                            for (Map embeddingMap : embeddingList) {
+                                List<Double> values = (List<Double>) embeddingMap.get("values");
+                                float[] floatValues = new float[values.size()];
+                                for (int j = 0; j < values.size(); j++) {
+                                    floatValues[j] = values.get(j).floatValue();
+                                }
+                                embeddings.add(new Embedding(floatValues, idx++));
+                            }
+                            batchSuccess = true;
+                        }
+                    } catch (Exception e) {
+                        // Batch failed (e.g. format issue or transient network), fallback to single calls
+                        for (String text : batch) {
+                            float[] vec = embedSingle(text);
+                            if (vec != null) {
+                                embeddings.add(new Embedding(vec, idx++));
+                            }
+                        }
+                        batchSuccess = true;
+                    }
+
+                    // Gentle delay between batches to respect free-tier token burst limits
+                    if (i + BATCH_SIZE < instructions.size()) {
+                        try {
+                            Thread.sleep(800);
+                        } catch (InterruptedException ignored) {
+                            Thread.currentThread().interrupt();
+                        }
+                    }
+                }
+
+                return new EmbeddingResponse(embeddings);
+            }
+
+            private float[] embedSingle(String text) {
+                try {
                     Map<String, Object> body = Map.of(
                             "content", Map.of("parts", List.of(Map.of("text", text))),
                             "outputDimensionality", 768
@@ -84,10 +164,11 @@ public class AiConfig {
                         for (int i = 0; i < values.size(); i++) {
                             floatValues[i] = values.get(i).floatValue();
                         }
-                        embeddings.add(new Embedding(floatValues, idx++));
+                        return floatValues;
                     }
+                } catch (Exception ignored) {
                 }
-                return new EmbeddingResponse(embeddings);
+                return null;
             }
 
             @Override

@@ -46,10 +46,10 @@ app:
     chunk-size: 700
     chunk-overlap: 100
     min-chunk-size-chars: 350
-    max-num-chunks: 10000
+    max-num-chunks: 500
     min-chunk-length-to-embed: 5
     top-k: 5
-    similarity-threshold: 0.0
+    similarity-threshold: 0.4
 
   cors:
     allowed-origins: "*"
