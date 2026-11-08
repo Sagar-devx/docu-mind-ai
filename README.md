@@ -9,7 +9,7 @@
 <a href="https://docu-mind-ai-phi-cyan.vercel.app/" target="_blank">
   <img src="https://img.shields.io/badge/🌐_Live_Demo-Visit_App-00C896?style=for-the-badge&logoColor=white" alt="Live Demo" />
 </a>
-<a href="https://docu-mind-ai-l4nr.onrender.com/v3/api-docs" target="_blank">
+<a href="https://docu-mind-ai-l4nr.onrender.com/swagger-ui/index.html" target="_blank">
   <img src="https://img.shields.io/badge/📖_API_Docs-Swagger_UI-85EA2D?style=for-the-badge&logo=swagger&logoColor=black" alt="API Docs" />
 </a>
 
@@ -30,7 +30,7 @@
 
 <br/>
 
-[🌐 Live Application](https://docu-mind-ai-phi-cyan.vercel.app/) · [📖 API Documentation](https://docu-mind-ai-l4nr.onrender.com/v3/api-docs) · [📐 System Architecture](#-system-architecture) · [🚀 Getting Started](#-getting-started-local-development)
+[🌐 Live Application](https://docu-mind-ai-phi-cyan.vercel.app/) · [📖 API Documentation](https://docu-mind-ai-l4nr.onrender.com/swagger-ui/index.html) · [📐 System Architecture](#-system-architecture) · [🚀 Getting Started](#-getting-started-local-development)
 
 </div>
 
