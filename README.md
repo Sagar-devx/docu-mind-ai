@@ -1,31 +1,36 @@
 <div align="center">
 
-<!-- Hero Header -->
-<img src="https://capsule-render.vercel.app/api?type=waving&color=0:0f0c29,50:302b63,100:24243e&height=220&section=header&text=DocuMind%20AI&fontSize=72&fontColor=ffffff&fontAlignY=35&desc=Enterprise%20Document%20Intelligence%20%26%20Semantic%20RAG%20Platform&descSize=18&descAlignY=55&descColor=c0c0ff&animation=fadeIn" width="100%" alt="DocuMind AI" />
+# 🧠 DocuMind AI
+### Enterprise Document Intelligence & Semantic RAG Platform
 
 <br/>
 
-<!-- Badges Row 1: Status & Links -->
-[![Live](https://img.shields.io/badge/🌐_Live_Demo-Visit_App-00C896?style=for-the-badge&logoColor=white)](https://docu-mind-ai-phi-cyan.vercel.app/)
-[![API Docs](https://img.shields.io/badge/📖_API_Docs-Swagger_UI-85EA2D?style=for-the-badge&logo=swagger&logoColor=black)](https://docu-mind-ai-l4nr.onrender.com/v3/api-docs)
-[![Stars](https://img.shields.io/github/stars/Sagar-devx/docu-mind-ai?style=for-the-badge&logo=github&color=yellow)](https://github.com/Sagar-devx/docu-mind-ai/stargazers)
+<!-- Action Badges -->
+<a href="https://docu-mind-ai-phi-cyan.vercel.app/" target="_blank">
+  <img src="https://img.shields.io/badge/🌐_Live_Demo-Visit_App-00C896?style=for-the-badge&logoColor=white" alt="Live Demo" />
+</a>
+<a href="https://docu-mind-ai-l4nr.onrender.com/v3/api-docs" target="_blank">
+  <img src="https://img.shields.io/badge/📖_API_Docs-Swagger_UI-85EA2D?style=for-the-badge&logo=swagger&logoColor=black" alt="API Docs" />
+</a>
 
-<!-- Badges Row 2: Tech -->
-![Java 25](https://img.shields.io/badge/Java-25-F89820?style=flat-square&logo=openjdk&logoColor=white)
-![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.1.2-6DB33F?style=flat-square&logo=springboot&logoColor=white)
-![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-pgvector-336791?style=flat-square&logo=postgresql&logoColor=white)
-![Groq](https://img.shields.io/badge/LLM-Groq_Qwen-FF6B6B?style=flat-square)
-![Gemini](https://img.shields.io/badge/Embeddings-Gemini-4285F4?style=flat-square&logo=google&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED?style=flat-square&logo=docker&logoColor=white)
+<br/><br/>
 
-<br/>
+<!-- Tech Badges -->
+<img src="https://img.shields.io/badge/Java-25-F89820?style=for-the-badge&logo=openjdk&logoColor=white" alt="Java 25"/>
+<img src="https://img.shields.io/badge/Spring_Boot-4.1.2-6DB33F?style=for-the-badge&logo=springboot&logoColor=white" alt="Spring Boot"/>
+<img src="https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React 19"/>
+<img src="https://img.shields.io/badge/PostgreSQL-pgvector-336791?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL pgvector"/>
+<img src="https://img.shields.io/badge/LLM-Groq_Qwen-FF6B6B?style=for-the-badge" alt="Groq"/>
+<img src="https://img.shields.io/badge/Embeddings-Gemini-4285F4?style=for-the-badge&logo=google&logoColor=white" alt="Gemini"/>
+<img src="https://img.shields.io/badge/Docker-Containerized-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker"/>
+
+<br/><br/>
 
 > **A production-ready, multi-tenant Retrieval-Augmented Generation (RAG) platform** that ingests enterprise documents (PDF, DOCX, TXT, MD), indexes them using vector embeddings into **PostgreSQL (pgvector)**, and generates high-precision, hallucination-resistant answers with clickable source citations, executive summaries, and LaTeX mathematical rendering.
 
 <br/>
 
-[🌐 Live Application](#) · [📖 API Documentation](#-core-api-endpoints) · [📐 Architecture](#-system-architecture) · [🚀 Quick Start](#-getting-started-local-development)
+[🌐 Live Application](https://docu-mind-ai-phi-cyan.vercel.app/) · [📖 API Documentation](https://docu-mind-ai-l4nr.onrender.com/v3/api-docs) · [📐 System Architecture](#-system-architecture) · [🚀 Getting Started](#-getting-started-local-development)
 
 </div>
 
@@ -81,14 +86,6 @@ Stateless **JWT Authentication**, BCrypt hashing, role-based endpoint protection
 </tr>
 </table>
 
-<div align="center">
-
-### ⏱️ 24/7 Zero Cold-Start
-
-Continuous keep-alive heartbeat via **UptimeRobot** prevents cloud container sleep on Render free tier.
-
-</div>
-
 ---
 
 ## 📐 System Architecture
@@ -116,12 +113,7 @@ flowchart TD
         GROQ["Groq Cloud\nQwen 3.8-27b Ultra-Fast LLM"]
     end
 
-    subgraph Monitor ["💓 Heartbeat"]
-        UR["UptimeRobot\n10-Min Keep-Alive Ping"]
-    end
-
     UI -->|"HTTPS REST + JWT"| API
-    UR -->|"GET /v3/api-docs"| API
     API --> SEC
     SEC --> ASYNC
     SEC --> RAG
@@ -297,7 +289,6 @@ flowchart LR
     A["🎨 Frontend\nVite Build"] -->|"Deploy"| B["▲ Vercel\nEdge CDN"]
     C["⚙️ Backend\nDocker Image"] -->|"Deploy"| D["🟢 Render.com\nSingapore"]
     D -->|"JDBC"| E["🐘 Neon Cloud\nap-southeast-1"]
-    F["🤖 UptimeRobot"] -->|"Keep Alive\n10 min"| D
 ```
 
 | Component | Platform | Region | Notes |
@@ -305,7 +296,6 @@ flowchart LR
 | **Frontend** | Vercel | Edge (Global) | Vite build + SPA rewrites |
 | **Backend** | Render.com | Singapore | Docker, unprivileged `spring:spring` user |
 | **Database** | Neon.tech | ap-southeast-1 | Serverless PostgreSQL 18 + pgvector |
-| **Uptime** | UptimeRobot | — | Polls `/v3/api-docs` to prevent cold starts |
 
 ---
 
@@ -324,10 +314,6 @@ flowchart LR
 
 <div align="center">
 
-<img src="https://capsule-render.vercel.app/api?type=waving&color=0:0f0c29,50:302b63,100:24243e&height=120&section=footer" width="100%" alt="Footer" />
-
-**If you find this project useful, consider giving it a ⭐**
-
-<sub>Built with ❤️ and ☕ by Sagar Sharma</sub>
+<sub>Built with ❤️ by Sagar Sharma</sub>
 
 </div>
