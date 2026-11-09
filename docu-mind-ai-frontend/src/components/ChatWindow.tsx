@@ -35,25 +35,25 @@ export const ChatWindow = ({ documentId, prefillQuestion, onPrefillUsed }: Props
   return (
     <div className="flex flex-col h-full bg-[#09090d]">
       {/* Session status banner & Mode toggle */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-2.5 border-b border-white/[0.06] bg-[#0d0d15]/80 backdrop-blur-md">
-        <div className="flex items-center gap-2.5">
-          <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-xs text-[#8e8ea6] font-medium">
-            {messages.length} message{messages.length === 1 ? '' : 's'} in session
+      <div className="flex items-center justify-between gap-2 px-3 sm:px-6 py-2 border-b border-white/[0.06] bg-[#0d0d15]/80 backdrop-blur-md">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+          <span className="text-xs text-[#8e8ea6] font-medium truncate">
+            {messages.length} msg{messages.length === 1 ? '' : 's'}
           </span>
           {documentId && (
-            <span className="text-[11px] text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-md border border-indigo-500/20">
-              Scoped Document
+            <span className="text-[10px] sm:text-[11px] text-indigo-400 bg-indigo-500/10 px-1.5 sm:px-2 py-0.5 rounded-md border border-indigo-500/20 truncate max-w-[100px] sm:max-w-none">
+              Scoped
             </span>
           )}
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           {/* Stream / Standard Mode Switcher */}
           <div className="flex items-center bg-[#13131e] border border-white/[0.08] p-0.5 rounded-xl">
             <button
               onClick={() => setUseStream(true)}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+              className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
                 useStream
                   ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 shadow-sm'
                   : 'text-[#71718a] hover:text-white'
@@ -61,11 +61,12 @@ export const ChatWindow = ({ documentId, prefillQuestion, onPrefillUsed }: Props
               title="Stream word-by-word with Server-Sent Events"
             >
               <Zap className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Stream (SSE)</span>
+              <span className="hidden sm:inline">Stream (SSE)</span>
+              <span className="sm:hidden">Stream</span>
             </button>
             <button
               onClick={() => setUseStream(false)}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+              className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
                 !useStream
                   ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 shadow-sm'
                   : 'text-[#71718a] hover:text-white'
@@ -80,7 +81,7 @@ export const ChatWindow = ({ documentId, prefillQuestion, onPrefillUsed }: Props
           {messages.length > 0 && (
             <button
               onClick={clearChat}
-              className="flex items-center gap-1.5 text-xs text-[#71718a] hover:text-rose-400 transition-colors ml-1"
+              className="flex items-center gap-1.5 text-xs text-[#71718a] hover:text-rose-400 transition-colors ml-1 p-1"
               title="Clear current conversation"
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -91,7 +92,7 @@ export const ChatWindow = ({ documentId, prefillQuestion, onPrefillUsed }: Props
       </div>
 
       {/* Messages area */}
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-6">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center max-w-md mx-auto py-12">
             <div className="relative mb-4">

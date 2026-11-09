@@ -61,28 +61,28 @@ export const Search = () => {
         subtitle="Search concepts, passages, and topics across your document library"
       />
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
         {/* Search Console Header */}
         <div className="max-w-4xl mx-auto">
-          <div className="relative rounded-3xl bg-gradient-to-b from-[#141422] to-[#101018] border border-white/[0.08] p-6 shadow-xl">
+          <div className="relative rounded-2xl sm:rounded-3xl bg-gradient-to-b from-[#141422] to-[#101018] border border-white/[0.08] p-4 sm:p-6 shadow-xl">
             <form onSubmit={handleSearch} className="space-y-3.5">
               <div className="relative flex items-center">
-                <SearchIcon className="absolute left-4 w-5 h-5 text-indigo-400 pointer-events-none" />
+                <SearchIcon className="absolute left-3.5 sm:left-4 w-4 h-4 sm:w-5 sm:h-5 text-indigo-400 pointer-events-none" />
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search documents (e.g., system architecture, project experience, requirements)..."
-                  className="w-full bg-[#0a0a10] border border-white/[0.08] focus:border-indigo-500/60 rounded-2xl pl-12 pr-32 py-3.5 text-sm text-white placeholder:text-[#525266] outline-none transition-all shadow-inner"
+                  placeholder="Search documents (e.g., system architecture, project experience)..."
+                  className="w-full bg-[#0a0a10] border border-white/[0.08] focus:border-indigo-500/60 rounded-2xl pl-10 sm:pl-12 pr-24 sm:pr-32 py-2.5 sm:py-3.5 text-xs sm:text-sm text-white placeholder:text-[#525266] outline-none transition-all shadow-inner"
                 />
                 <button
                   type="submit"
                   disabled={!query.trim() || search.isPending}
-                  className="absolute right-2 px-5 py-2 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-indigo-600/25 flex items-center gap-2"
+                  className="absolute right-1.5 sm:right-2 px-3 sm:px-5 py-1.5 sm:py-2 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-indigo-600/25 flex items-center gap-1.5 sm:gap-2"
                 >
                   {search.isPending ? (
                     <>
                       <LoadingSpinner size="sm" />
-                      <span>Searching...</span>
+                      <span className="hidden sm:inline">Searching...</span>
                     </>
                   ) : (
                     <>
@@ -94,7 +94,7 @@ export const Search = () => {
               </div>
 
               {/* Filters Row */}
-              <div className="flex flex-wrap items-center gap-2.5 pt-0.5">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 pt-0.5">
                 {/* Top-K Select */}
                 <div className="flex items-center gap-2 bg-[#0a0a10] border border-white/[0.08] rounded-xl px-3 py-1.5 text-xs text-[#8e8ea6]">
                   <Layers className="w-3.5 h-3.5 text-indigo-400" />

@@ -60,17 +60,17 @@ export const UploadModal = ({ onClose }: Props) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-      <div className="bg-[#12121c]/95 border border-white/[0.08] rounded-3xl w-full max-w-lg shadow-2xl shadow-indigo-950/40 overflow-hidden">
+    <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center z-50 p-3 sm:p-4 animate-in fade-in duration-200">
+      <div className="bg-[#12121c]/95 border border-white/[0.08] rounded-2xl sm:rounded-3xl w-full max-w-lg shadow-2xl shadow-indigo-950/40 overflow-hidden max-h-[92vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-white/[0.06]">
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-white/[0.06] shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-500/15 border border-indigo-500/25 flex items-center justify-center">
-              <Upload className="w-5 h-5 text-indigo-400" />
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-indigo-500/15 border border-indigo-500/25 flex items-center justify-center shrink-0">
+              <Upload className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-400" />
             </div>
             <div>
-              <h2 className="text-white font-semibold text-lg">Ingest Documents</h2>
-              <p className="text-[#71718a] text-xs">PDF, DOCX, TXT — Up to 25MB per file</p>
+              <h2 className="text-white font-semibold text-base sm:text-lg">Ingest Documents</h2>
+              <p className="text-[#71718a] text-[11px] sm:text-xs">PDF, DOCX, TXT — Up to 25MB per file</p>
             </div>
           </div>
           <button
@@ -82,7 +82,7 @@ export const UploadModal = ({ onClose }: Props) => {
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-4">
+        <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
           {results.length === 0 ? (
             <>
               {/* Drop Area */}
@@ -93,7 +93,7 @@ export const UploadModal = ({ onClose }: Props) => {
                 }}
                 onDragLeave={() => setIsDragging(false)}
                 onDrop={handleDrop}
-                className={`relative flex flex-col items-center justify-center border-2 border-dashed rounded-2xl p-8 cursor-pointer transition-all duration-200 ${
+                className={`relative flex flex-col items-center justify-center border-2 border-dashed rounded-2xl p-5 sm:p-8 cursor-pointer transition-all duration-200 ${
                   isDragging
                     ? 'border-indigo-500 bg-indigo-500/10 scale-[0.99]'
                     : 'border-white/[0.09] hover:border-indigo-500/40 hover:bg-white/[0.02]'

@@ -45,8 +45,8 @@ export const VectorChunkCard = ({ citation, index, highlight }: Props) => {
 
   return (
     <div className="bg-[#12121b]/80 border border-white/[0.06] hover:border-indigo-500/30 rounded-xl p-3.5 transition-all duration-200">
-      <div className="flex items-center justify-between gap-2 mb-2">
-        <div className="flex items-center gap-2 min-w-0">
+      <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 mb-2">
+        <div className="flex items-center gap-2 min-w-0 max-w-full sm:max-w-[60%]">
           <span className="w-5 h-5 rounded-md bg-indigo-500/15 text-indigo-400 text-[11px] font-bold flex items-center justify-center shrink-0">
             {index + 1}
           </span>
@@ -56,7 +56,7 @@ export const VectorChunkCard = ({ citation, index, highlight }: Props) => {
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0 ml-auto sm:ml-0">
           {citation.pageNumber != null && (
             <span className="text-[10px] text-[#71718a] bg-white/[0.04] px-1.5 py-0.5 rounded-md border border-white/[0.04]">
               Page {citation.pageNumber}

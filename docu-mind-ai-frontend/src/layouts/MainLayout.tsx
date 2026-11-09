@@ -10,7 +10,7 @@ export const MainLayout = () => (
     <Sidebar />
 
     {/* Main View Area */}
-    <main className="flex-1 overflow-hidden flex flex-col relative z-10">
+    <main className="flex-1 overflow-hidden flex flex-col relative z-10 w-full min-w-0">
       <Outlet />
     </main>
   </div>

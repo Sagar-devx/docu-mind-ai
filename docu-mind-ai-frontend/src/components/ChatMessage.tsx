@@ -63,7 +63,7 @@ const CodePreBlock = ({ children }: any) => {
           )}
         </button>
       </div>
-      <pre className="!m-0 !p-0 !border-none !bg-transparent">{children}</pre>
+      <pre className="!m-0 !p-0 !border-none !bg-transparent overflow-x-auto">{children}</pre>
     </div>
   );
 };
@@ -82,7 +82,7 @@ export const ChatMessage = ({ message }: Props) => {
   if (message.role === 'user') {
     return (
       <div className="flex justify-end mb-6 animate-in fade-in duration-200">
-        <div className="max-w-[80%] rounded-2xl rounded-tr-sm bg-gradient-to-r from-indigo-600 to-indigo-500 text-white px-5 py-3.5 text-sm leading-relaxed shadow-lg shadow-indigo-600/20 font-medium">
+        <div className="max-w-[85%] sm:max-w-[80%] rounded-2xl rounded-tr-sm bg-gradient-to-r from-indigo-600 to-indigo-500 text-white px-4 sm:px-5 py-3 sm:py-3.5 text-xs sm:text-sm leading-relaxed shadow-lg shadow-indigo-600/20 font-medium break-words">
           {message.content}
         </div>
       </div>
@@ -230,7 +230,7 @@ export const ChatMessage = ({ message }: Props) => {
 
           {/* AI Response Bubble */}
           <div
-            className={`rounded-2xl rounded-tl-sm bg-[#12121b]/90 border border-white/[0.07] p-5 shadow-xl ${
+            className={`rounded-2xl rounded-tl-sm bg-[#12121b]/90 border border-white/[0.07] p-3.5 sm:p-5 shadow-xl break-words ${
               message.isStreaming ? 'stream-cursor' : ''
             }`}
           >

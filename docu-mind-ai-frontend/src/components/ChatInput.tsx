@@ -45,9 +45,9 @@ export const ChatInput = ({
   };
 
   return (
-    <div className="p-4 border-t border-white/[0.06] bg-[#0c0c13]/90 backdrop-blur-xl">
+    <div className="p-3 sm:p-4 border-t border-white/[0.06] bg-[#0c0c13]/90 backdrop-blur-xl">
       {/* Quick Suggestions Chips */}
-      <div className="flex items-center gap-2 mb-3 overflow-x-auto no-scrollbar pb-1">
+      <div className="flex items-center gap-2 mb-2.5 sm:mb-3 overflow-x-auto no-scrollbar pb-1">
         <span className="text-[11px] font-semibold text-[#525266] uppercase flex items-center gap-1 shrink-0">
           <Sparkles className="w-3 h-3 text-indigo-400" />
           Suggestions:
@@ -65,14 +65,14 @@ export const ChatInput = ({
       </div>
 
       {/* Input container */}
-      <div className="relative flex items-end gap-3 bg-[#13131d] border border-white/[0.09] focus-within:border-indigo-500/60 rounded-2xl p-3 transition-all shadow-inner">
+      <div className="relative flex items-end gap-2 sm:gap-3 bg-[#13131d] border border-white/[0.09] focus-within:border-indigo-500/60 rounded-2xl p-2.5 sm:p-3 transition-all shadow-inner">
         <textarea
           ref={ref}
           onKeyDown={onKey}
           placeholder={placeholder}
           rows={1}
           disabled={isLoading}
-          className="flex-1 bg-transparent resize-none outline-none text-white text-sm placeholder:text-[#525266] leading-relaxed max-h-36 disabled:opacity-50 py-1"
+          className="flex-1 bg-transparent resize-none outline-none text-white text-xs sm:text-sm placeholder:text-[#525266] leading-relaxed max-h-36 disabled:opacity-50 py-1"
           style={{ minHeight: '24px' }}
           onInput={(e) => {
             const t = e.currentTarget;
@@ -84,7 +84,7 @@ export const ChatInput = ({
         <button
           onClick={submit}
           disabled={isLoading}
-          className="w-10 h-10 flex items-center justify-center rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 disabled:opacity-40 disabled:cursor-not-allowed text-white shadow-lg shadow-indigo-600/20 transition-all shrink-0"
+          className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 disabled:opacity-40 disabled:cursor-not-allowed text-white shadow-lg shadow-indigo-600/20 transition-all shrink-0"
           title="Send query"
         >
           {isLoading ? <Square className="w-4 h-4 fill-white" /> : <Send className="w-4 h-4" />}
@@ -105,7 +105,7 @@ export const ChatInput = ({
             </>
           )}
         </span>
-        <span>Enter ↵ to send • Shift + Enter for new line</span>
+        <span className="hidden sm:inline">Enter ↵ to send • Shift + Enter for new line</span>
       </div>
     </div>
   );
