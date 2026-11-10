@@ -2,6 +2,7 @@ package com.documind.exception;
 
 import com.documind.dto.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -102,6 +103,20 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.builder()
                         .success(false)
                         .message(ex.getMessage())
+                        .data(null)
+                        .timeStamp(LocalDateTime.now())
+                        .build()
+                );
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<?> handleDataIntegrityViolationException(DataIntegrityViolationException ex) {
+        log.warn("Database constraint violation: {}", ex.getMessage());
+
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiResponse.builder()
+                        .success(false)
+                        .message("Username already exists. Please choose a different username.")
                         .data(null)
                         .timeStamp(LocalDateTime.now())
                         .build()
