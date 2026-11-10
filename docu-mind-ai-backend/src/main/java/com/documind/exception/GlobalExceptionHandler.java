@@ -113,10 +113,16 @@ public class GlobalExceptionHandler {
     public ResponseEntity<?> handleDataIntegrityViolationException(DataIntegrityViolationException ex) {
         log.warn("Database constraint violation: {}", ex.getMessage());
 
+        String message = "Username already exists. Please choose a different username.";
+        String cause = ex.getMostSpecificCause() != null ? ex.getMostSpecificCause().getMessage() : "";
+        if (cause != null && (cause.contains("users_email_key") || cause.toLowerCase().contains("email"))) {
+            message = "Email is already registered. Please sign in or use a different email.";
+        }
+
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ApiResponse.builder()
                         .success(false)
-                        .message("Username already exists. Please choose a different username.")
+                        .message(message)
                         .data(null)
                         .timeStamp(LocalDateTime.now())
                         .build()

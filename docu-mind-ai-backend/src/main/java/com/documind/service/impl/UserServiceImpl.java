@@ -29,14 +29,22 @@ public class UserServiceImpl implements UserService {
     public UserDto registerUser(RegisterUserRequest request) {
 
         String username = request.username() != null ? request.username().trim() : "";
+        String email = request.email() != null ? request.email().trim().toLowerCase() : "";
+
         if (username.isBlank())
             throw new IllegalArgumentException("Username cannot be blank");
+
+        if (email.isBlank())
+            throw new IllegalArgumentException("Email cannot be blank");
 
         if (userRepository.existsByUsernameIgnoreCase(username))
             throw new IllegalArgumentException("Username already exists. Please choose a different username.");
 
+        if (userRepository.findByEmail(email).isPresent())
+            throw new IllegalArgumentException("Email is already registered. Please sign in or use a different email.");
+
         User user = new User();
-        user.setEmail(request.email());
+        user.setEmail(email);
         user.setUsername(username);
         user.setPassword(passwordEncoder.encode(request.password()));
         user.setRole(Role.USER);
