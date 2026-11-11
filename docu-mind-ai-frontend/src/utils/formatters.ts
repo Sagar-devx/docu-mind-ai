@@ -8,7 +8,8 @@ export const formatFileSize = (bytes: number): string => {
 
 export const formatDate = (dateStr: string): string => {
   if (!dateStr) return '';
-  return new Date(dateStr).toLocaleDateString('en-US', {
+  const utcStr = dateStr.endsWith('Z') || dateStr.includes('+') ? dateStr : `${dateStr}Z`;
+  return new Date(utcStr).toLocaleDateString('en-US', {
     year: 'numeric', month: 'short', day: 'numeric',
     hour: '2-digit', minute: '2-digit',
   });
