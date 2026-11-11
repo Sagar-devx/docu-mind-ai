@@ -144,6 +144,13 @@ public class AiConfig {
                             }
                         } catch (Exception e) {
                             log.warn("Gemini batch embedding call failed on attempt {}/{}: {}", attempt + 1, effectiveKeys.size(), e.getMessage());
+                            if (e.getMessage() != null && e.getMessage().contains("429")) {
+                                try {
+                                    Thread.sleep(3000);
+                                } catch (InterruptedException ignored) {
+                                    Thread.currentThread().interrupt();
+                                }
+                            }
                         }
                     }
 
@@ -152,6 +159,11 @@ public class AiConfig {
                         for (String text : batch) {
                             float[] vec = embedSingle(text);
                             embeddings.add(new Embedding(vec != null ? vec : new float[768], idx++));
+                            try {
+                                Thread.sleep(250);
+                            } catch (InterruptedException ignored) {
+                                Thread.currentThread().interrupt();
+                            }
                         }
                     }
 

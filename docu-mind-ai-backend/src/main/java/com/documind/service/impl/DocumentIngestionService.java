@@ -89,7 +89,7 @@ public class DocumentIngestionService {
             if (enrichedChunks.size() > appProperties.getRag().getMaxNumChunks()) {
                 throw new DocumentProcessingException(
                         "Document produced " + enrichedChunks.size() + " chunks, exceeding the allowed limit of "
-                                + appProperties.getRag().getMaxNumChunks() + " chunks for Free Tier quota. Please upload a smaller section or split the PDF."
+                                + appProperties.getRag().getMaxNumChunks() + " chunks (~200-300 pages). Please upload a smaller section or split the document."
                 );
             }
 
@@ -98,6 +98,13 @@ public class DocumentIngestionService {
             for (int i = 0; i < enrichedChunks.size(); i += batchSize) {
                 List<Document> batch = enrichedChunks.subList(i, Math.min(i + batchSize, enrichedChunks.size()));
                 vectorStore.add(batch);
+                if (i + batchSize < enrichedChunks.size()) {
+                    try {
+                        Thread.sleep(4500); // 4.5s pacing to stay strictly within Gemini 30k TPM rate limit
+                    } catch (InterruptedException ignored) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
             }
             documentMetaData.setStatus(DocumentStatus.INDEXED);
             documentMetaData.setTotalChunks(enrichedChunks.size());
