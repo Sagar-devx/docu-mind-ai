@@ -1,5 +1,6 @@
 package com.documind.config;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
@@ -21,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
+@Slf4j
 @Configuration
 public class AiConfig {
 
@@ -92,21 +94,20 @@ public class AiConfig {
                 // If single text (e.g. search query or single chunk), use fast direct call
                 if (instructions.size() == 1) {
                     float[] vec = embedSingle(instructions.get(0));
-                    if (vec != null) {
-                        embeddings.add(new Embedding(vec, 0));
-                    }
+                    embeddings.add(new Embedding(vec != null ? vec : new float[768], 0));
                     return new EmbeddingResponse(embeddings);
                 }
 
-                // For multiple chunks, process in batches of 50 via batchEmbedContents
+                // For multiple chunks, process in batches of 25 via batchEmbedContents
                 int idx = 0;
                 for (int i = 0; i < instructions.size(); i += BATCH_SIZE) {
                     List<String> batch = instructions.subList(i, Math.min(i + BATCH_SIZE, instructions.size()));
                     List<Map<String, Object>> batchRequests = new ArrayList<>();
                     for (String text : batch) {
+                        String cleanText = (text == null || text.trim().isEmpty()) ? "content" : text;
                         batchRequests.add(Map.of(
                                 "model", "models/gemini-embedding-001",
-                                "content", Map.of("parts", List.of(Map.of("text", text))),
+                                "content", Map.of("parts", List.of(Map.of("text", cleanText))),
                                 "outputDimensionality", 768
                         ));
                     }
@@ -125,28 +126,32 @@ public class AiConfig {
 
                             if (response != null && response.containsKey("embeddings")) {
                                 List<Map> embeddingList = (List<Map>) response.get("embeddings");
-                                for (Map embeddingMap : embeddingList) {
-                                    List<Double> values = (List<Double>) embeddingMap.get("values");
-                                    float[] floatValues = new float[values.size()];
-                                    for (int j = 0; j < values.size(); j++) {
-                                        floatValues[j] = values.get(j).floatValue();
+                                for (int k = 0; k < batch.size(); k++) {
+                                    float[] floatValues = null;
+                                    if (k < embeddingList.size()) {
+                                        Map embeddingMap = embeddingList.get(k);
+                                        if (embeddingMap != null && embeddingMap.containsKey("values")) {
+                                            List<Double> values = (List<Double>) embeddingMap.get("values");
+                                            floatValues = new float[values.size()];
+                                            for (int j = 0; j < values.size(); j++) {
+                                                floatValues[j] = values.get(j).floatValue();
+                                            }
+                                        }
                                     }
-                                    embeddings.add(new Embedding(floatValues, idx++));
+                                    embeddings.add(new Embedding(floatValues != null ? floatValues : new float[768], idx++));
                                 }
                                 batchSuccess = true;
                             }
                         } catch (Exception e) {
-                            // Try next key in rotation on failure
+                            log.warn("Gemini batch embedding call failed on attempt {}/{}: {}", attempt + 1, effectiveKeys.size(), e.getMessage());
                         }
                     }
 
                     if (!batchSuccess) {
-                        // Fallback to single calls with rotating keys
+                        // Fallback to single calls with rotating keys; ensure every item gets an embedding
                         for (String text : batch) {
                             float[] vec = embedSingle(text);
-                            if (vec != null) {
-                                embeddings.add(new Embedding(vec, idx++));
-                            }
+                            embeddings.add(new Embedding(vec != null ? vec : new float[768], idx++));
                         }
                     }
 
@@ -164,11 +169,12 @@ public class AiConfig {
             }
 
             private float[] embedSingle(String text) {
+                String cleanText = (text == null || text.trim().isEmpty()) ? "content" : text;
                 for (int attempt = 0; attempt < effectiveKeys.size(); attempt++) {
                     String key = getNextApiKey();
                     try {
                         Map<String, Object> body = Map.of(
-                                "content", Map.of("parts", List.of(Map.of("text", text))),
+                                "content", Map.of("parts", List.of(Map.of("text", cleanText))),
                                 "outputDimensionality", 768
                         );
                         Map response = restClient.post()
@@ -188,10 +194,11 @@ public class AiConfig {
                             }
                             return floatValues;
                         }
-                    } catch (Exception ignored) {
+                    } catch (Exception e) {
+                        log.warn("Gemini single embedding call failed on attempt {}/{}: {}", attempt + 1, effectiveKeys.size(), e.getMessage());
                     }
                 }
-                return null;
+                return new float[768];
             }
 
             @Override
