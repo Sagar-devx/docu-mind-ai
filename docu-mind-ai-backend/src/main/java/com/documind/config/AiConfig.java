@@ -166,15 +166,6 @@ public class AiConfig {
                             }
                         }
                     }
-
-                    // Gentle delay between batches: 4.5s for 2-key rotation (9s rest/key), 8s for single key to stay strictly under 30k TPM
-                    if (i + BATCH_SIZE < instructions.size()) {
-                        try {
-                            Thread.sleep(effectiveKeys.size() > 1 ? 4500 : 8000);
-                        } catch (InterruptedException ignored) {
-                            Thread.currentThread().interrupt();
-                        }
-                    }
                 }
 
                 return new EmbeddingResponse(embeddings);

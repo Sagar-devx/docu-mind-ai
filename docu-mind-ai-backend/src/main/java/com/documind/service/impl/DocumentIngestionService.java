@@ -89,18 +89,18 @@ public class DocumentIngestionService {
             if (enrichedChunks.size() > appProperties.getRag().getMaxNumChunks()) {
                 throw new DocumentProcessingException(
                         "Document produced " + enrichedChunks.size() + " chunks, exceeding the allowed limit of "
-                                + appProperties.getRag().getMaxNumChunks() + " chunks (~200-300 pages). Please upload a smaller section or split the document."
+                                + appProperties.getRag().getMaxNumChunks() + " chunks (~150-200 pages). Please upload a smaller section or split the document."
                 );
             }
 
-            // 3. Generate embeddings and store vectors into PgVector in safe batches of 25 chunks
-            int batchSize = 25;
+            // 3. Generate embeddings and store vectors into PgVector in safe batches of 15 chunks
+            int batchSize = 15;
             for (int i = 0; i < enrichedChunks.size(); i += batchSize) {
                 List<Document> batch = enrichedChunks.subList(i, Math.min(i + batchSize, enrichedChunks.size()));
                 vectorStore.add(batch);
                 if (i + batchSize < enrichedChunks.size()) {
                     try {
-                        Thread.sleep(4500); // 4.5s pacing to stay strictly within Gemini 30k TPM rate limit
+                        Thread.sleep(5000); // 5s pacing to stay strictly within Gemini 30k TPM rate limit
                     } catch (InterruptedException ignored) {
                         Thread.currentThread().interrupt();
                     }
