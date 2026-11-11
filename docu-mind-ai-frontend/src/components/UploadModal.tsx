@@ -70,7 +70,7 @@ export const UploadModal = ({ onClose }: Props) => {
             </div>
             <div>
               <h2 className="text-white font-semibold text-base sm:text-lg">Ingest Documents</h2>
-              <p className="text-[#71718a] text-[11px] sm:text-xs">PDF, DOCX, TXT — Max 25MB (Up to ~200 pages recommended)</p>
+              <p className="text-[#71718a] text-[11px] sm:text-xs">PDF, DOCX, TXT — Max 25MB • Up to 100 pages</p>
             </div>
           </div>
           <button
@@ -112,8 +112,8 @@ export const UploadModal = ({ onClose }: Props) => {
                 <p className="text-white font-medium text-sm">
                   Click to browse <span className="text-[#71718a] font-normal">or drag & drop files</span>
                 </p>
-                <p className="text-[#62627a] text-xs mt-1">
-                  Recommended up to ~200 pages for best speed • Auto-chunking & Gemini Embeddings
+                <p className="text-[#62627a] text-xs mt-1 text-center">
+                  Up to 100 pages • Auto-chunking & Gemini Embeddings
                 </p>
               </label>
 
