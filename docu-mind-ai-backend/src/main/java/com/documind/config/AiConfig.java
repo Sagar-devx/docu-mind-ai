@@ -16,8 +16,10 @@ import org.springframework.web.client.RestClient;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Configuration
 public class AiConfig {
@@ -53,7 +55,15 @@ public class AiConfig {
     }
 
     @Bean
-    public EmbeddingModel embeddingModel(@Value("${gemini.api-key}") String apiKey) {
+    public EmbeddingModel embeddingModel(@Value("${gemini.api-key}") String apiKeyConfig) {
+
+        List<String> apiKeys = Arrays.stream(apiKeyConfig.split(","))
+                .map(String::trim)
+                .filter(k -> !k.isEmpty())
+                .toList();
+
+        final List<String> effectiveKeys = apiKeys.isEmpty() ? List.of("") : apiKeys;
+        final AtomicInteger keyCounter = new AtomicInteger(0);
 
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(Duration.ofSeconds(30));
@@ -64,7 +74,11 @@ public class AiConfig {
                 .build();
 
         return new EmbeddingModel() {
-            private static final int BATCH_SIZE = 50;
+            private static final int BATCH_SIZE = 25;
+
+            private String getNextApiKey() {
+                return effectiveKeys.get(Math.abs(keyCounter.getAndIncrement() % effectiveKeys.size()));
+            }
 
             @Override
             public EmbeddingResponse call(EmbeddingRequest request) {
@@ -98,42 +112,48 @@ public class AiConfig {
                     }
 
                     boolean batchSuccess = false;
-                    try {
-                        Map response = restClient.post()
-                                .uri("https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:batchEmbedContents")
-                                .header("Content-Type", "application/json")
-                                .header("x-goog-api-key", apiKey)
-                                .body(Map.of("requests", batchRequests))
-                                .retrieve()
-                                .body(Map.class);
+                    for (int attempt = 0; attempt < effectiveKeys.size() && !batchSuccess; attempt++) {
+                        String key = getNextApiKey();
+                        try {
+                            Map response = restClient.post()
+                                    .uri("https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:batchEmbedContents")
+                                    .header("Content-Type", "application/json")
+                                    .header("x-goog-api-key", key)
+                                    .body(Map.of("requests", batchRequests))
+                                    .retrieve()
+                                    .body(Map.class);
 
-                        if (response != null && response.containsKey("embeddings")) {
-                            List<Map> embeddingList = (List<Map>) response.get("embeddings");
-                            for (Map embeddingMap : embeddingList) {
-                                List<Double> values = (List<Double>) embeddingMap.get("values");
-                                float[] floatValues = new float[values.size()];
-                                for (int j = 0; j < values.size(); j++) {
-                                    floatValues[j] = values.get(j).floatValue();
+                            if (response != null && response.containsKey("embeddings")) {
+                                List<Map> embeddingList = (List<Map>) response.get("embeddings");
+                                for (Map embeddingMap : embeddingList) {
+                                    List<Double> values = (List<Double>) embeddingMap.get("values");
+                                    float[] floatValues = new float[values.size()];
+                                    for (int j = 0; j < values.size(); j++) {
+                                        floatValues[j] = values.get(j).floatValue();
+                                    }
+                                    embeddings.add(new Embedding(floatValues, idx++));
                                 }
-                                embeddings.add(new Embedding(floatValues, idx++));
+                                batchSuccess = true;
                             }
-                            batchSuccess = true;
+                        } catch (Exception e) {
+                            // Try next key in rotation on failure
                         }
-                    } catch (Exception e) {
-                        // Batch failed (e.g. format issue or transient network), fallback to single calls
+                    }
+
+                    if (!batchSuccess) {
+                        // Fallback to single calls with rotating keys
                         for (String text : batch) {
                             float[] vec = embedSingle(text);
                             if (vec != null) {
                                 embeddings.add(new Embedding(vec, idx++));
                             }
                         }
-                        batchSuccess = true;
                     }
 
-                    // Gentle delay between batches to respect free-tier token burst limits
+                    // Gentle delay between batches: 4.5s for 2-key rotation (9s rest/key), 8s for single key to stay strictly under 30k TPM
                     if (i + BATCH_SIZE < instructions.size()) {
                         try {
-                            Thread.sleep(800);
+                            Thread.sleep(effectiveKeys.size() > 1 ? 4500 : 8000);
                         } catch (InterruptedException ignored) {
                             Thread.currentThread().interrupt();
                         }
@@ -144,29 +164,32 @@ public class AiConfig {
             }
 
             private float[] embedSingle(String text) {
-                try {
-                    Map<String, Object> body = Map.of(
-                            "content", Map.of("parts", List.of(Map.of("text", text))),
-                            "outputDimensionality", 768
-                    );
-                    Map response = restClient.post()
-                            .uri("https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent")
-                            .header("Content-Type", "application/json")
-                            .header("x-goog-api-key", apiKey)
-                            .body(body)
-                            .retrieve()
-                            .body(Map.class);
+                for (int attempt = 0; attempt < effectiveKeys.size(); attempt++) {
+                    String key = getNextApiKey();
+                    try {
+                        Map<String, Object> body = Map.of(
+                                "content", Map.of("parts", List.of(Map.of("text", text))),
+                                "outputDimensionality", 768
+                        );
+                        Map response = restClient.post()
+                                .uri("https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent")
+                                .header("Content-Type", "application/json")
+                                .header("x-goog-api-key", key)
+                                .body(body)
+                                .retrieve()
+                                .body(Map.class);
 
-                    if (response != null && response.containsKey("embedding")) {
-                        Map embeddingMap = (Map) response.get("embedding");
-                        List<Double> values = (List<Double>) embeddingMap.get("values");
-                        float[] floatValues = new float[values.size()];
-                        for (int i = 0; i < values.size(); i++) {
-                            floatValues[i] = values.get(i).floatValue();
+                        if (response != null && response.containsKey("embedding")) {
+                            Map embeddingMap = (Map) response.get("embedding");
+                            List<Double> values = (List<Double>) embeddingMap.get("values");
+                            float[] floatValues = new float[values.size()];
+                            for (int i = 0; i < values.size(); i++) {
+                                floatValues[i] = values.get(i).floatValue();
+                            }
+                            return floatValues;
                         }
-                        return floatValues;
+                    } catch (Exception ignored) {
                     }
-                } catch (Exception ignored) {
                 }
                 return null;
             }

@@ -10,8 +10,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -90,8 +93,12 @@ public class DocumentIngestionService {
                 );
             }
 
-            // 3. Generate embeddings and store vectors into PgVector
-            vectorStore.add(enrichedChunks);
+            // 3. Generate embeddings and store vectors into PgVector in safe batches of 25 chunks
+            int batchSize = 25;
+            for (int i = 0; i < enrichedChunks.size(); i += batchSize) {
+                List<Document> batch = enrichedChunks.subList(i, Math.min(i + batchSize, enrichedChunks.size()));
+                vectorStore.add(batch);
+            }
             documentMetaData.setStatus(DocumentStatus.INDEXED);
             documentMetaData.setTotalChunks(enrichedChunks.size());
             documentMetaData.setErrorMessage(null);
@@ -101,7 +108,7 @@ public class DocumentIngestionService {
                     documentMetaData.getFileName(), enrichedChunks.size(), documentMetaData.getUser().getId());
             return enrichedChunks.size();
 
-        } catch (Exception e) {
+        } catch (Throwable e) {
             log.error("Error occurred while ingesting document: {} (userId: {})", 
                     documentMetaData.getFileName(), documentMetaData.getUser().getId(), e);
 
@@ -113,6 +120,9 @@ public class DocumentIngestionService {
             documentMetaData.setStatus(DocumentStatus.FAILED);
             documentMetaData.setErrorMessage(errorMsg);
             documentMetadataRepository.save(documentMetaData);
+            if (e instanceof DocumentProcessingException dpe) {
+                throw dpe;
+            }
             throw new DocumentProcessingException(errorMsg, e);
         }
 
@@ -131,8 +141,26 @@ public class DocumentIngestionService {
         try {
             ingest(parsedDocs, documentMetaData);
             log.info("Background async ingestion finished successfully for documentId: {}", documentId);
-        } catch (Exception e) {
-            log.error("Async background ingestion failed for documentId: {}", documentId, e);
+        } catch (Throwable t) {
+            log.error("Async background ingestion failed for documentId: {}", documentId, t);
+        }
+    }
+
+    // Auto-recovers any documents left in PROCESSING or UPLOADING status after a crash/restart
+    @EventListener(ApplicationReadyEvent.class)
+    @Transactional
+    public void recoverStuckDocumentsOnStartup() {
+        List<DocumentMetaData> stuckDocs = documentMetadataRepository.findByStatusIn(
+                List.of(DocumentStatus.PROCESSING, DocumentStatus.UPLOADING)
+        );
+        if (!stuckDocs.isEmpty()) {
+            log.warn("Found {} stuck document(s) in PROCESSING/UPLOADING state after restart. Marking as FAILED.", stuckDocs.size());
+            for (DocumentMetaData doc : stuckDocs) {
+                doc.setStatus(DocumentStatus.FAILED);
+                doc.setErrorMessage("Processing was interrupted due to a server restart. Please re-upload.");
+            }
+            documentMetadataRepository.saveAll(stuckDocs);
+            log.info("Successfully recovered {} stuck document(s).", stuckDocs.size());
         }
     }
 }
