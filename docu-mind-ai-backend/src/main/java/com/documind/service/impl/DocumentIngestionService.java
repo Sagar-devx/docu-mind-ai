@@ -136,7 +136,7 @@ public class DocumentIngestionService {
     }
 
     // Executes vector ingestion asynchronously in a background thread to prevent HTTP timeouts
-    @Async
+    @Async("taskExecutor")
     public void ingestAsync(List<Document> parsedDocs, UUID documentId) {
         log.info("Starting background async ingestion for documentId: {}", documentId);
         DocumentMetaData documentMetaData = documentMetadataRepository.findById(documentId).orElse(null);
