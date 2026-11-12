@@ -82,10 +82,10 @@
       <p>Split-engine architecture combining specialized embedding with extreme inference speed.</p>
       <ul>
         <li><b>Embedding Engine:</b> Google Gemini 768-dimensional model for dense semantic representation.</li>
-        <li><b>Reasoning Core:</b> Groq-accelerated <code>qwen3.8-27b</code> on custom LPUs for sub-second streaming answers.</li>
+        <li><b>Reasoning Core:</b> Groq-accelerated <code>llama-3.3-70b-versatile</code> on custom LPUs for sub-second streaming answers.</li>
         <li><b>Hallucination-Proof:</b> Strict system prompts grounding all answers directly in retrieved document context.</li>
       </ul>
-      <p><code>⚡ Groq LPU</code> <code>🧠 Qwen 3.8-27B</code> <code>💎 Gemini Embeddings</code></p>
+      <p><code>⚡ Groq LPU</code> <code>🧠 Llama 3.3 70B</code> <code>💎 Gemini Embeddings</code></p>
     </td>
   </tr>
 </table>

@@ -66,13 +66,21 @@ public class RagServiceImpl implements RagService {
 
         log.debug("Sending prompt to LLM for conversationId: {} (context length: {} chars)", conversationId, contextText.length());
 
-        String answer = this.chatClient
-                .prompt()
-                .system(system -> system.param("doc_context", contextText))
-                .advisors(advisor -> advisor.param(ChatMemory.CONVERSATION_ID, conversationId))
-                .user(request.getQuestion())
-                .call()
-                .content();
+        String answer;
+        try {
+            answer = this.chatClient
+                    .prompt()
+                    .system(system -> system.param("doc_context", contextText))
+                    .advisors(advisor -> advisor.param(ChatMemory.CONVERSATION_ID, conversationId))
+                    .user(request.getQuestion())
+                    .call()
+                    .content();
+        } catch (Exception e) {
+            log.error("LLM call failed for conversationId: '{}' (userId: {})", conversationId, user.getId(), e);
+            answer = (e.getMessage() != null && e.getMessage().contains("429"))
+                    ? "⚠️ *Rate limit reached from AI provider. Please wait a moment and try again.*"
+                    : "⚠️ *Unable to generate response from AI provider. Please try again.*";
+        }
 
         long responseTime = System.currentTimeMillis() - startTime;
         log.info("Completed Q&A for conversationId: '{}' in {} ms with {} citations (userId: {})",
@@ -131,7 +139,14 @@ public class RagServiceImpl implements RagService {
                 .stream()
                 .content()
                 .doOnComplete(() -> log.info("Finished streaming response for conversationId: '{}' (userId: {})", conversationId, user.getId()))
-                .doOnError(e -> log.error("Error during streaming for conversationId: '{}' (userId: {})", conversationId, user.getId(), e));
+                .doOnError(e -> log.error("Error during streaming for conversationId: '{}' (userId: {})", conversationId, user.getId(), e))
+                .onErrorResume(e -> {
+                    log.error("Streaming error fallback for conversationId: '{}'", conversationId, e);
+                    String errorMsg = (e.getMessage() != null && e.getMessage().contains("429"))
+                            ? "\n\n⚠️ *Rate limit reached from AI provider. Please wait a moment and try again.*"
+                            : "\n\n⚠️ *An error occurred while generating the response. Please try again.*";
+                    return Flux.just(errorMsg);
+                });
     }
 
     // Formats retrieved chunks with file name and page number headers for LLM readability

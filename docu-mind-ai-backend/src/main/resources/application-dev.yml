@@ -25,8 +25,12 @@ spring:
       base-url: "https://api.groq.com/openai/v1"
       api-key: ${GROQ_API_KEY:}
       chat:
-        model: "qwen/qwen3.8-27b"
+        model: ${GROQ_MODEL:llama-3.3-70b-versatile}
         temperature: 0.2
+        options:
+          model: ${GROQ_MODEL:llama-3.3-70b-versatile}
+          temperature: 0.2
+          max-tokens: ${GROQ_MAX_TOKENS:1500}
       embedding:
         enabled: false
 
