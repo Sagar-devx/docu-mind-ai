@@ -155,15 +155,9 @@ public class AiConfig {
                     }
 
                     if (!batchSuccess) {
-                        // Fallback to single calls with rotating keys; ensure every item gets an embedding
-                        for (String text : batch) {
-                            float[] vec = embedSingle(text);
-                            embeddings.add(new Embedding(vec != null ? vec : new float[768], idx++));
-                            try {
-                                Thread.sleep(250);
-                            } catch (InterruptedException ignored) {
-                                Thread.currentThread().interrupt();
-                            }
+                        // Batch failed across all keys; fallback to zero-vector placeholders without burning daily quota via single calls
+                        for (int k = 0; k < batch.size(); k++) {
+                            embeddings.add(new Embedding(new float[768], idx++));
                         }
                     }
                 }
