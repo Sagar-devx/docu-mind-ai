@@ -63,6 +63,9 @@
       <p><code>🔑 Multi-Key Rotation</code> <code>⏱️ 5s Pacing</code> <code>🛡️ 350-Chunk Cap</code></p>
     </td>
   </tr>
+</table>
+
+<table>
   <tr>
     <td width="50%" valign="top">
       <h3>🔍 Deep Semantic Vector Search</h3>
@@ -85,6 +88,9 @@
       <p><code>⚡ Groq LPU</code> <code>🧠 Qwen 3.8-27B</code> <code>💎 Gemini Embeddings</code></p>
     </td>
   </tr>
+</table>
+
+<table>
   <tr>
     <td width="50%" valign="top">
       <h3>🎨 Cyber-Grade Modern Dark UI</h3>
