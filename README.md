@@ -41,49 +41,72 @@
 ## ✨ Feature Highlights
 
 <table>
-<tr>
-<td width="50%" valign="top">
-
-### ⚡ Async Non-Blocking Ingestion
-Multipart uploads return in **~150ms** with `PROCESSING` status. Parsing, chunking & embedding run asynchronously via `@Async` thread pools while the UI polls dynamically.
-
-</td>
-<td width="50%" valign="top">
-
-### 🛡️ Free-Tier Quota Guardrails
-Google Gemini `batchEmbedContents` (50 chunks/batch) with adaptive **800ms pacing** and a **500-chunk** document guardrail — zero `429` errors.
-
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-
-### 🔍 Vector Similarity Search
-Powered by **pgvector v0.8.6** on **Neon Cloud** with HNSW indexing and Cosine Distance for sub-millisecond similarity retrieval.
-
-</td>
-<td width="50%" valign="top">
-
-### 🤖 Dual-AI Hybrid Pipeline
-**Embeddings →** Gemini `text-embedding-004` (768d)  
-**Reasoning →** Groq-accelerated `qwen3.8-27b` for low-latency generation.
-
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-
-### 🎨 Modern Dark UI
-**React 19 + TypeScript + Tailwind CSS** with custom KaTeX math rendering, glowing neon status indicators, and executive blockquote cards.
-
-</td>
-<td width="50%" valign="top">
-
-### 🔐 Enterprise-Grade Security
-Stateless **JWT Authentication**, BCrypt hashing, role-based endpoint protection (RBAC), and dynamic CORS whitelisting.
-
-</td>
-</tr>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>⚡ High-Throughput Async Ingestion</h3>
+      <p>Instant file acceptance with non-blocking vector processing in the background.</p>
+      <ul>
+        <li><b>Zero-Wait Uploads:</b> Immediate <code>201 Created</code> response while background worker thread handles ingestion.</li>
+        <li><b>Smart Chunking:</b> <code>TokenTextSplitter</code> with 700-token chunks & 100-token overlap to maintain semantic continuity.</li>
+        <li><b>Universal Parser:</b> Native Apache PDFBox page extraction + Apache Tika for Word (.docx) and plain text (.txt).</li>
+      </ul>
+      <p><code>🚀 Non-Blocking</code> <code>🧵 Spring @Async</code> <code>📄 Page-Aware</code></p>
+    </td>
+    <td width="50%" valign="top">
+      <h3>🛡️ Production Free-Tier Guardrails</h3>
+      <p>Hardened rate-limit architecture designed to survive free-tier cloud quotas without errors.</p>
+      <ul>
+        <li><b>Safe Batching:</b> 15-chunk micro-batches via <code>batchEmbedContents</code> staying strictly under 30k TPM.</li>
+        <li><b>Round-Robin Multi-Key:</b> Dynamic API key rotation & instant failover to double throughput.</li>
+        <li><b>Strict Guardrails:</b> 350-chunk document ceiling (~100–200 pages) with 5s inter-batch pacing for zero <code>429</code> errors.</li>
+      </ul>
+      <p><code>🔑 Multi-Key Rotation</code> <code>⏱️ 5s Pacing</code> <code>🛡️ 350-Chunk Cap</code></p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>🔍 Deep Semantic Vector Search</h3>
+      <p>Sub-millisecond similarity retrieval powered by pgvector on Neon Cloud.</p>
+      <ul>
+        <li><b>HNSW Indexing:</b> Hierarchical Navigable Small World graphs for ultra-fast approximate nearest neighbor lookups.</li>
+        <li><b>768-Dim Embeddings:</b> Google Gemini vector embeddings with Cosine Distance similarity calculation.</li>
+        <li><b>Strict Metadata Tagging:</b> Every chunk tagged with <code>documentId</code>, <code>chunkIndex</code>, <code>userId</code>, and exact page numbers.</li>
+      </ul>
+      <p><code>📐 pgvector v0.8.6</code> <code>⚡ HNSW Graph</code> <code>🎯 Cosine Metric</code></p>
+    </td>
+    <td width="50%" valign="top">
+      <h3>🤖 Dual-AI Cognitive Pipeline</h3>
+      <p>Split-engine architecture combining specialized embedding with extreme inference speed.</p>
+      <ul>
+        <li><b>Embedding Engine:</b> Google Gemini 768-dimensional model for dense semantic representation.</li>
+        <li><b>Reasoning Core:</b> Groq-accelerated <code>qwen3.8-27b</code> on custom LPUs for sub-second streaming answers.</li>
+        <li><b>Hallucination-Proof:</b> Strict system prompts grounding all answers directly in retrieved document context.</li>
+      </ul>
+      <p><code>⚡ Groq LPU</code> <code>🧠 Qwen 3.8-27B</code> <code>💎 Gemini Embeddings</code></p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>🎨 Cyber-Grade Modern Dark UI</h3>
+      <p>High-polish React 19 frontend engineered for developer and research workflows.</p>
+      <ul>
+        <li><b>LaTeX & Code Rendering:</b> Native KaTeX math rendering, syntax-highlighted codeblocks, and markdown tables.</li>
+        <li><b>Dynamic Status Vault:</b> Real-time polling with glowing neon badges (<code>Indexed</code>, <code>Processing</code>, <code>Failed</code>).</li>
+        <li><b>Interactive Citations:</b> Clickable references displaying exact chunk text and originating page numbers.</li>
+      </ul>
+      <p><code>⚛️ React 19</code> <code>🎨 Tailwind CSS</code> <code>📐 KaTeX Math</code></p>
+    </td>
+    <td width="50%" valign="top">
+      <h3>🔐 Enterprise Multi-Tenant Security</h3>
+      <p>Isolated data segregation and stateless security out-of-the-box.</p>
+      <ul>
+        <li><b>Stateless JWT:</b> Secure access token authorization with BCrypt password hashing.</li>
+        <li><b>Tenant Isolation:</b> Strict row-level user partitioning ensuring users only access their own vector data.</li>
+        <li><b>Production Ready:</b> Containerized Docker deployment with auto-recovering stuck document hooks.</li>
+      </ul>
+      <p><code>🔒 JWT + BCrypt</code> <code>🏢 Multi-Tenant</code> <code>🐳 Dockerized</code></p>
+    </td>
+  </tr>
 </table>
 
 ---
