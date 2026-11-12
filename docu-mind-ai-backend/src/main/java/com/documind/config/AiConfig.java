@@ -42,6 +42,7 @@ public class AiConfig {
                                                    - Format contact information, repositories, or profiles as clickable Markdown links (e.g. [LinkedIn](https://...), [GitHub](https://...)).
                                                    - For comparisons, grades, or structured data, use clean Markdown tables.
                                                    - Conclude comprehensive answers with an executive callout block (> **Summary:** ...).
+                                                   - Keep answers clear, comprehensive yet concise (under 450 words).
                         
                         
                                                 Document Context is :
