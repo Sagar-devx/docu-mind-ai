@@ -56,12 +56,12 @@ public class DocumentMetadataServiceImpl implements DocumentMetadataService {
         List<Document> parsedDocs;
         try {
             parsedDocs = parserService.parse(file);
-        } catch (Exception e) {
-            log.error("Failed to parse document '{}': {}", fileName, e.getMessage());
+        } catch (Throwable t) {
+            log.error("Failed to parse document '{}': {}", fileName, t.getMessage());
             documentMetaData.setStatus(DocumentStatus.FAILED);
-            documentMetaData.setErrorMessage("Failed to parse document: " + e.getMessage());
+            documentMetaData.setErrorMessage("Failed to parse document: " + t.getMessage());
             documentMetadataRepository.save(documentMetaData);
-            throw new DocumentProcessingException("Failed to parse file: " + fileName, e);
+            throw new DocumentProcessingException("Failed to parse file: " + fileName, t);
         }
 
         // Fire asynchronous vectorization in background thread to unblock HTTP response immediately
